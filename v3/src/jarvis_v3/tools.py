@@ -201,6 +201,51 @@ TOOL_DEFINITIONS: List[dict] = [
             "required": ["task", "initial_prompt"],
         },
     },
+    {
+        "name": "cron_add",
+        "description": "Schedule a recurring task. Examples: 'every 30 minutes', 'daily at 9am', 'weekly on mon at 10:00'.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Human-readable job name."},
+                "schedule": {"type": "string", "description": "Natural-language schedule."},
+                "prompt": {"type": "string", "description": "Task text for the agent."},
+            },
+            "required": ["name", "schedule", "prompt"],
+        },
+    },
+    {
+        "name": "cron_list",
+        "description": "List all scheduled cron jobs.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "cron_remove",
+        "description": "Remove a cron job by ID.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "job_id": {"type": "string"},
+            },
+            "required": ["job_id"],
+        },
+    },
+    {
+        "name": "dream_consolidate",
+        "description": "Trigger background memory consolidation (AutoDream).",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "compress_context",
+        "description": "Compress long conversation history using LLM summarisation.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "session_id": {"type": "string", "description": "Session to compress."},
+            },
+            "required": ["session_id"],
+        },
+    },
 ]
 
 
@@ -414,6 +459,50 @@ def _optimize_prompt(task: str, initial_prompt: str, iterations: int = 3) -> str
         return f"[PROMPT OPT ERROR] {exc}"
 
 
+def _cron_add(name: str, schedule: str, prompt: str) -> str:
+    try:
+        from jarvis_v3.cron_scheduler import add_job
+        return add_job(name, schedule, prompt)
+    except Exception as exc:
+        return f"[CRON ERROR] {exc}"
+
+
+def _cron_list() -> str:
+    try:
+        from jarvis_v3.cron_scheduler import list_jobs
+        return list_jobs()
+    except Exception as exc:
+        return f"[CRON ERROR] {exc}"
+
+
+def _cron_remove(job_id: str) -> str:
+    try:
+        from jarvis_v3.cron_scheduler import remove_job
+        return remove_job(job_id)
+    except Exception as exc:
+        return f"[CRON ERROR] {exc}"
+
+
+def _dream_consolidate() -> str:
+    try:
+        from jarvis_v3.auto_dream import tick
+        return tick()
+    except Exception as exc:
+        return f"[DREAM ERROR] {exc}"
+
+
+def _compress_context(session_id: str) -> str:
+    """Compress the session's conversation history."""
+    try:
+        from jarvis_v3.session_memory import get_session_context
+        from jarvis_v3.context_compressor import compress
+        msgs = get_session_context(session_id)
+        compressed = compress(msgs)
+        return f"Compressed {len(msgs)} → {len(compressed)} turns"
+    except Exception as exc:
+        return f"[COMPRESS ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -430,4 +519,9 @@ _DISPATCH_MAP = {
     "browser_interact": _browser_interact,
     "ocr_extract": _ocr_extract,
     "optimize_prompt": _optimize_prompt,
+    "cron_add": _cron_add,
+    "cron_list": _cron_list,
+    "cron_remove": _cron_remove,
+    "dream_consolidate": _dream_consolidate,
+    "compress_context": _compress_context,
 }
