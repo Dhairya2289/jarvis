@@ -1,0 +1,41 @@
+# JARVIS V3 — Morning Briefing Workflow
+# Trigger: every weekday at 8:00 AM
+# Actions: health report → weather (placeholder) → notify user
+
+name: morning_brief
+version: "1.0"
+description: "Daily morning briefing with system health and a summary note."
+
+nodes:
+  - id: trigger
+    type: trigger
+    name: "Weekday 8am"
+    config:
+      trigger_type: cron
+      cron_expression: "0 8 * * 1-5"
+
+  - id: health
+    type: action
+    name: "System Health"
+    config:
+      action_type: tool_call
+      tool_name: system_health_report
+      tool_args: {}
+
+  - id: notify
+    type: action
+    name: "Desktop Notification"
+    config:
+      action_type: notify
+      title: "☀️ Morning Brief"
+      message: "Your system is healthy. Have a great day!"
+      urgency: normal
+
+connections:
+  - from: trigger
+    to: health
+    condition: always
+
+  - from: health
+    to: notify
+    condition: always

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS // AI-OS v4.2.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/*
+ ╔══════════════════════════════════════════════════╗
+ ║   JARVIS  —  AI-OS HUD  //  Hyprland Edition     ║
+ ║   Iron Man × Cyberpunk 2077 interface aesthetic  ║
+ ╚══════════════════════════════════════════════════╝
+*/
+
+:root {
+  --bg:          #020c18;
+  --bg-deep:     #010810;
+  --bg-panel:    rgba(3, 13, 30, 0.88);
+  --bg-hover:    rgba(0, 232, 255, 0.04);
+
+  --cyan:        #00e8ff;
+  --cyan-half:   rgba(0, 232, 255, 0.45);
+  --cyan-low:    rgba(0, 232, 255, 0.14);
+  --cyan-dim:    rgba(0, 232, 255, 0.06);
+  --blue:        #2060ff;
+  --blue-b:      #4d8fff;
+  --purple:      #7c4dff;
+
+  --green:       #00e67a;
+  --red:         #ff2244;
+  --yellow:      #ffc800;
+  --orange:      #ff8800;
+
+  --text:        #8bbfd4;
+  --text-hi:     #d6f0ff;
+  --text-lo:     #2e5568;
+  --text-dim:    #152535;
+
+  --f-hud:  'Orbitron', 'Courier New', monospace;
+  --f-mono: 'Share Tech Mono', 'Courier New', monospace;
+  --f-ui:   'Rajdhani', sans-serif;
+
+  --glow-s: 0 0 8px rgba(0,232,255,0.65), 0 0 18px rgba(0,232,255,0.3);
+  --glow-m: 0 0 12px rgba(0,232,255,0.55), 0 0 30px rgba(0,232,255,0.2), 0 0 60px rgba(0,232,255,0.07);
+  --glow-l: 0 0 20px rgba(0,232,255,0.5), 0 0 60px rgba(0,232,255,0.18), 0 0 120px rgba(0,232,255,0.07);
+  --panel-shadow: 0 4px 28px rgba(0,0,0,0.65), 0 0 0 1px rgba(0,232,255,0.07), inset 0 1px 0 rgba(0,232,255,0.07);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:100%; height:100%; overflow:hidden; }
+
+body {
+  font-family: var(--f-ui);
+  color: var(--text);
+  background: var(--bg-deep);
+  background-image:
+    radial-gradient(ellipse 55% 60% at 22% 48%, rgba(0,40,110,0.13) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 55% at 78% 18%, rgba(0,20,90,0.09) 0%, transparent 100%),
+    radial-gradient(ellipse 45% 40% at 65% 82%, rgba(0,30,70,0.08) 0%, transparent 100%);
+}
+
+/* Fine grid overlay */
+body::before {
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(0,232,255,0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,232,255,0.022) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* Scanlines */
+body::after {
+  content:''; position:fixed; inset:0; z-index:800; pointer-events:none;
+  background: repeating-linear-gradient(0deg,
+    rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 1px,
+    transparent 1px, transparent 3px);
+}
+
+/* ── BOOT OVERLAY ── */
+#boot {
+  position:fixed; inset:0; z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+  background: var(--bg-deep);
+  animation: bootFadeOut 0.7s ease 3s forwards;
+}
+@keyframes bootFadeOut { to { opacity:0; pointer-events:none; } }
+
+.boot-logo {
+  font-family: var(--f-hud); font-size:40px; font-weight:900;
+  color:var(--cyan); letter-spacing:20px;
+  text-shadow: var(--glow-l);
+  animation: bootLogoAnim 3s ease forwards;
+}
+@keyframes bootLogoAnim {
+  0%   { opacity:0; letter-spacing:50px; }
+  20%  { opacity:1; letter-spacing:20px; }
+  75%  { opacity:1; }
+  100% { opacity:0; }
+}
+.boot-sub {
+  font-family:var(--f-mono); font-size:10px; color:var(--text-lo); letter-spacing:4px;
+  animation: bootSubAnim 3s ease forwards;
+}
+@keyframes bootSubAnim { 0%,12%{opacity:0} 30%,72%{opacity:1} 100%{opacity:0} }
+
+.boot-track { width:280px; height:2px; background:rgba(0,232,255,0.1); border-radius:1px; overflow:hidden; }
+.boot-fill  { height:100%; width:0; background:linear-gradient(90deg,var(--blue),var(--cyan)); border-radius:1px; animation: bootFillAnim 2.2s cubic-bezier(0.4,0,0.2,1) 0.4s forwards; }
+@keyframes bootFillAnim { to { width:100%; } }
+
+/* ── MAIN GRID ── */
+#app {
+  position:relative; z-index:1;
+  display:grid;
+  grid-template-columns: 285px 1fr 315px;
+  grid-template-rows: 54px 1fr 132px;
+  grid-template-areas: "hdr hdr hdr" "term core stats" "inp inp inp";
+  gap:7px; padding:7px;
+  height:100vh; width:100vw;
+}
+
+/* ── PANEL ── */
+.panel {
+  position:relative;
+  background: var(--bg-panel);
+  border: 1px solid rgba(0,232,255,0.1);
+  border-radius:3px;
+  backdrop-filter: blur(28px) saturate(1.6);
+  -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  box-shadow: var(--panel-shadow);
+  overflow:hidden;
+}
+
+/* Four corner brackets */
+.panel::before {
+  content:''; position:absolute; top:5px; left:5px; z-index:8;
+  width:14px; height:14px;
+  border-top:1px solid var(--cyan); border-left:1px solid var(--cyan);
+}
+.panel::after {
+  content:''; position:absolute; bottom:5px; right:5px; z-index:8;
+  width:14px; height:14px;
+  border-bottom:1px solid var(--cyan); border-right:1px solid var(--cyan);
+}
+.brk-tr {
+  position:absolute; top:5px; right:5px; z-index:8;
+  width:14px; height:14px;
+  border-top:1px solid rgba(0,232,255,0.38); border-right:1px solid rgba(0,232,255,0.38);
+  pointer-events:none;
+}
+.brk-bl {
+  position:absolute; bottom:5px; left:5px; z-index:8;
+  width:14px; height:14px;
+  border-bottom:1px solid rgba(0,232,255,0.38); border-left:1px solid rgba(0,232,255,0.38);
+  pointer-events:none;
+}
+
+.ph {
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 7px 14px;
+  border-bottom: 1px solid rgba(0,232,255,0.07);
+  font-family:var(--f-hud); font-size:8.5px; font-weight:700;
+  letter-spacing:3px; color:var(--cyan); text-transform:uppercase;
+}
+.ph-l { display:flex; align-items:center; gap:7px; }
+.ph-r { font-size:8px; color:var(--text-lo); letter-spacing:1px; }
+
+/* ── HEADER ── */
+#header {
+  grid-area:hdr;
+  background: rgba(2,10,24,0.93);
+  border:1px solid rgba(0,232,255,0.11);
+  border-radius:3px;
+  backdrop-filter:blur(28px);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 18px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.55), 0 0 80px rgba(0,80,200,0.04);
+}
+
+.logo-wrap { display:flex; align-items:center; gap:11px; }
+.logo-svg  { width:34px; height:34px; flex-shrink:0; }
+.logo-name {
+  font-family:var(--f-hud); font-size:22px; font-weight:900;
+  color:var(--cyan); letter-spacing:7px;
+  text-shadow: var(--glow-m);
+}
+.logo-build { font-family:var(--f-mono); font-size:9px; color:var(--text-lo); letter-spacing:2px; margin-top:2px; }
+
+.hdr-badges { display:flex; gap:9px; }
+.badge {
+  display:flex; align-items:center; gap:5px;
+  padding:3px 9px;
+  background:rgba(0,0,0,0.3);
+  border:1px solid rgba(0,232,255,0.09);
+  border-radius:2px;
+  font-family:var(--f-mono); font-size:9px; color:var(--text-lo);
+}
+.led { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.led-g { background:var(--green); box-shadow:0 0 5px var(--green); animation:blink 2.2s infinite; }
+.led-c { background:var(--cyan);  box-shadow:0 0 5px var(--cyan);  animation:blink 1.8s infinite; }
+.led-b { background:var(--blue-b); box-shadow:0 0 5px var(--blue-b); animation:blink 3.1s infinite; }
+
+.hdr-clock { text-align:right; }
+.clk-t { font-family:var(--f-hud); font-size:20px; font-weight:700; color:var(--cyan); text-shadow:var(--glow-s); letter-spacing:2px; }
+.clk-d { font-family:var(--f-mono); font-size:8.5px; color:var(--text-lo); letter-spacing:2px; margin-top:1px; }
+
+/* ── TERMINAL PANEL ── */
+#terminal { grid-area:term; display:flex; flex-direction:column; }
+
+#term-out {
+  flex:1; overflow-y:auto; padding:8px 12px;
+  font-family:var(--f-mono); font-size:11px; line-height:1.75;
+  scrollbar-width:thin; scrollbar-color:rgba(0,232,255,0.13) transparent;
+}
+#term-out::-webkit-scrollbar { width:3px; }
+#term-out::-webkit-scrollbar-thumb { background:rgba(0,232,255,0.13); border-radius:2px; }
+
+.ll { display:flex; gap:6px; margin-bottom:1px; animation:fadeUp 0.22s ease both; }
+@keyframes fadeUp { from{opacity:0;transform:translateY(3px)} to{opacity:1;transform:translateY(0)} }
+.lt  { color:var(--text-lo); flex-shrink:0; user-select:none; }
+.lk  { flex-shrink:0; padding:0 4px; font-size:8px; font-weight:700; border-radius:1px; user-select:none; }
+.lk-sys  { background:rgba(0,232,255,0.08);  color:var(--cyan); }
+.lk-ai   { background:rgba(124,77,255,0.13); color:#b39ddb; }
+.lk-net  { background:rgba(40,120,255,0.11); color:#82aaff; }
+.lk-ok   { background:rgba(0,230,122,0.1);   color:var(--green); }
+.lk-err  { background:rgba(255,34,68,0.13);  color:var(--red); }
+.lk-warn { background:rgba(255,200,0,0.1);   color:var(--yellow); }
+.lm     { flex:1; color:var(--text); word-break:break-all; }
+.ec  { color:var(--cyan); }
+.eg  { color:var(--green); }
+.er  { color:var(--red); }
+.ey  { color:var(--yellow); }
+
+.term-foot {
+  display:flex; align-items:center; gap:6px;
+  padding:5px 12px;
+  border-top:1px solid rgba(0,232,255,0.07);
+  font-family:var(--f-mono); font-size:11px;
+}
+.tps { color:var(--green); }
+.tcur { display:inline-block; width:7px; height:12px; background:var(--cyan); animation:caret 1.1s step-end infinite; }
+@keyframes caret { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes blink  { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── AI CORE ── */
+#core {
+  grid-area:core;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  position:relative;
+}
+#core-amb {
+  position:absolute; inset:0; pointer-events:none;
+  background: radial-gradient(ellipse 72% 80% at center, rgba(0,55,130,0.13) 0%, transparent 70%);
+}
+
+.viz-wrap {
+  position:relative;
+  width: min(368px, 84%);
+  aspect-ratio:1;
+  z-index:1;
+}
+#viz-svg {
+  width:100%; height:100%;
+  filter: drop-shadow(0 0 14px rgba(0,232,255,0.22));
+}
+
+/* SVG ring rotations */
+.rr { transform-origin:200px 200px; }
+.rr1 { animation:rcw  22s linear infinite; }
+.rr2 { animation:rccw 16s linear infinite; }
+.rr3 { animation:rcw   7s linear infinite; }
+.rr4 { animation:rccw 35s linear infinite; }
+.rr5 { animation:rcw  13s linear infinite; }
+@keyframes rcw  { to { transform:rotate(360deg); } }
+@keyframes rccw { to { transform:rotate(-360deg); } }
+
+/* Core glow pulse */
+#core-halo {
+  transform-origin:200px 200px;
+  animation:haloIdle 3s ease-in-out infinite;
+}
+@keyframes haloIdle { 0%,100%{opacity:0.5;transform:scale(0.93)} 50%{opacity:1;transform:scale(1.08)} }
+
+#core-circle {
+  transform-origin:200px 200px;
+  animation:coreIdle 3s ease-in-out infinite;
+}
+@keyframes coreIdle { 0%,100%{transform:scale(0.96)} 50%{transform:scale(1.04)} }
+
+/* State-specific overrides */
+.state-listening #core-halo   { animation:haloListen 0.85s ease-in-out infinite; }
+.state-listening #core-circle { animation:coreListen 0.85s ease-in-out infinite; }
+.state-speaking  #core-halo   { animation:haloSpeak 0.32s ease-in-out infinite; }
+.state-speaking  #core-circle { animation:coreSpeak 0.32s ease-in-out infinite; }
+.state-processing #core-halo  { animation:haloProc 0.6s ease-in-out infinite; }
+.state-processing #core-circle{ animation:coreProc 0.6s ease-in-out infinite; }
+@keyframes haloListen  { 0%,100%{opacity:0.65;transform:scale(0.9)}  50%{opacity:1;transform:scale(1.18)} }
+@keyframes coreListen  { 0%,100%{transform:scale(0.92)} 50%{transform:scale(1.12)} }
+@keyframes haloSpeak   { 0%,100%{opacity:0.75;transform:scale(0.93)} 50%{opacity:1;transform:scale(1.22)} }
+@keyframes coreSpeak   { 0%,100%{transform:scale(0.95)} 50%{transform:scale(1.16)} }
+@keyframes haloProc    { 0%,100%{opacity:0.55;transform:scale(0.95)} 50%{opacity:1;transform:scale(1.10)} }
+@keyframes coreProc    { 0%,100%{transform:scale(0.97)} 50%{transform:scale(1.06)} }
+
+/* Ring speed changes per state */
+.state-listening .rr3 { animation-duration:2s; }
+.state-listening .rr1 { animation-duration:6s; }
+.state-speaking  .rr3 { animation-duration:0.9s; }
+.state-speaking  .rr1 { animation-duration:2.5s; }
+.state-processing .rr3{ animation-duration:3.5s; }
+.state-processing .rr5{ animation-duration:2s; }
+
+/* Wave rings (listening) */
+.wave-ring { transform-origin:200px 200px; opacity:0; }
+.state-listening .wave-ring { animation:waveExpand 2.1s ease-out infinite; }
+.state-listening .wave-ring:nth-child(2) { animation-delay:0.7s; }
+.state-listening .wave-ring:nth-child(3) { animation-delay:1.4s; }
+@keyframes waveExpand {
+  0%   { transform:scale(1);   opacity:0.55; }
+  100% { transform:scale(2.7); opacity:0;    }
+}
+
+#viz-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+
+.core-lbl { margin-top:18px; text-align:center; z-index:1; }
+#cst {
+  font-family:var(--f-hud); font-size:14px; font-weight:700;
+  letter-spacing:7px; color:var(--cyan); text-shadow:var(--glow-m); text-transform:uppercase;
+}
+#css {
+  font-family:var(--f-mono); font-size:9px; color:var(--text-lo);
+  letter-spacing:2px; margin-top:5px;
+}
+
+.sctrl { display:flex; gap:8px; margin-top:15px; z-index:1; }
+.sb {
+  padding:5px 15px;
+  background:transparent;
+  border:1px solid var(--text-lo);
+  border-radius:2px;
+  color:var(--text-lo);
+  font-family:var(--f-mono); font-size:9px; letter-spacing:2px;
+  cursor:pointer; transition:all 0.18s; text-transform:uppercase;
+}
+.sb:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 8px rgba(0,232,255,0.15); }
+.sb.on    { border-color:var(--cyan); background:rgba(0,232,255,0.1); color:var(--cyan); box-shadow:var(--glow-s); }
+
+/* ── STATS PANEL ── */
+#stats { grid-area:stats; display:flex; flex-direction:column; }
+.ss {
+  flex:1; overflow-y:auto; padding:10px 12px;
+  scrollbar-width:none;
+}
+.ss::-webkit-scrollbar { display:none; }
+
+.sec { margin-bottom:15px; }
+.stitle {
+  font-family:var(--f-hud); font-size:8px; font-weight:700;
+  letter-spacing:3px; color:var(--text-lo); text-transform:uppercase;
+  padding-bottom:5px; margin-bottom:9px;
+  border-bottom:1px solid rgba(0,232,255,0.07);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.stv { color:var(--cyan); font-size:9px; }
+
+/* Big 2x2 boxes */
+.sgrid { display:grid; grid-template-columns:1fr 1fr; gap:5px; margin-bottom:13px; }
+.sbox {
+  background:rgba(0,232,255,0.028);
+  border:1px solid rgba(0,232,255,0.08);
+  border-radius:3px; padding:6px 5px; text-align:center; transition:all 0.25s;
+}
+.sbox:hover { background:rgba(0,232,255,0.055); border-color:rgba(0,232,255,0.18); }
+.sv { font-family:var(--f-hud); font-size:16px; font-weight:700; color:var(--cyan); line-height:1; }
+.sl { font-family:var(--f-mono); font-size:7px; color:var(--text-lo); letter-spacing:2px; margin-top:3px; }
+
+/* Metric rows */
+.mr  { display:flex; align-items:center; gap:7px; margin-bottom:7px; }
+.ml  { font-family:var(--f-mono); font-size:9px; color:var(--text-lo); width:40px; flex-shrink:0; }
+.mbw { flex:1; height:3px; background:rgba(0,232,255,0.05); border-radius:2px; overflow:visible; position:relative; }
+.mb  { height:100%; border-radius:2px; transition:width 0.55s cubic-bezier(0.4,0,0.2,1); position:relative; }
+.mb::after { content:''; position:absolute; right:-1px; top:50%; transform:translateY(-50%); width:5px; height:5px; border-radius:50%; background:inherit; box-shadow:0 0 5px currentColor; }
+.mbc { background:linear-gradient(90deg,rgba(0,232,255,0.18),var(--cyan)); }
+.mbb { background:linear-gradient(90deg,rgba(77,143,255,0.18),var(--blue-b)); }
+.mbg { background:linear-gradient(90deg,rgba(0,230,122,0.18),var(--green)); }
+.mby { background:linear-gradient(90deg,rgba(255,200,0,0.18),var(--yellow)); }
+.mbr { background:linear-gradient(90deg,rgba(255,34,68,0.18),var(--red)); }
+.mv  { font-family:var(--f-hud); font-size:9px; color:var(--cyan); width:36px; text-align:right; flex-shrink:0; }
+
+/* Agents */
+.ag {
+  display:flex; align-items:center; gap:7px;
+  padding:5px 8px; margin-bottom:4px;
+  background:rgba(0,232,255,0.018);
+  border:1px solid rgba(0,232,255,0.06);
+  border-radius:2px; transition:all 0.2s; cursor:default;
+}
+.ag:hover { background:rgba(0,232,255,0.045); border-color:rgba(0,232,255,0.14); }
+.al { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
+.al-on   { background:var(--green);  box-shadow:0 0 5px var(--green);  animation:blink 2s infinite; }
+.al-busy { background:var(--yellow); box-shadow:0 0 5px var(--yellow); animation:blink 0.8s infinite; }
+.al-idle { background:var(--text-lo); }
+.al-err  { background:var(--red);    box-shadow:0 0 5px var(--red); }
+.ai2 { flex:1; min-width:0; }
+.an  { font-family:var(--f-mono); font-size:9.5px; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.an .aid { color:var(--text-lo); }
+.at  { font-family:var(--f-mono); font-size:8px; color:var(--text-lo); }
+.ac  { font-family:var(--f-hud); font-size:8px; color:var(--text-lo); flex-shrink:0; }
+
+/* ── INPUT AREA ── */
+#input-area {
+  grid-area:inp;
+  background:rgba(2,10,24,0.94);
+  border:1px solid rgba(0,232,255,0.13);
+  border-top:1px solid rgba(0,232,255,0.22);
+  border-radius:3px;
+  backdrop-filter:blur(28px);
+  padding:9px 15px 11px;
+  display:flex; flex-direction:column; gap:8px;
+  box-shadow: 0 -2px 20px rgba(0,100,200,0.04);
+}
+
+.inp-tags { display:flex; gap:7px; align-items:center; flex-wrap:wrap; }
+.itag {
+  display:flex; align-items:center; gap:4px;
+  padding:3px 9px;
+  background:rgba(0,232,255,0.04);
+  border:1px solid rgba(0,232,255,0.11);
+  border-radius:20px;
+  font-family:var(--f-mono); font-size:9px; color:var(--text-lo);
+  transition:all 0.18s;
+}
+.itag:hover { background:rgba(0,232,255,0.07); border-color:rgba(0,232,255,0.22); }
+.itag i { font-size:8px; color:var(--cyan); }
+.tv { color:var(--cyan); }
+
+/* Animated input divider */
+.inp-div {
+  height:1px;
+  background:linear-gradient(90deg, transparent, var(--cyan-half) 30%, var(--cyan) 50%, var(--cyan-half) 70%, transparent);
+  position:relative;
+}
+.inp-div::after {
+  content:''; position:absolute;
+  left:50%; top:-2px; transform:translateX(-50%);
+  width:56px; height:5px;
+  background:radial-gradient(ellipse at center, var(--cyan) 0%, transparent 80%);
+  opacity:0.55;
+}
+
+.inp-row { display:flex; align-items:center; gap:10px; }
+.inp-caret { font-family:var(--f-mono); font-size:16px; color:var(--cyan); user-select:none; }
+#cmd {
+  flex:1; background:transparent; border:none; outline:none;
+  color:var(--text-hi); font-family:var(--f-mono); font-size:14px;
+  caret-color:var(--cyan);
+}
+#cmd::placeholder { color:var(--text-dim); font-size:12px; font-style:italic; }
+
+.inp-btns { display:flex; gap:6px; align-items:center; }
+.ib {
+  display:flex; align-items:center; gap:4px;
+  padding:4px 11px;
+  background:transparent;
+  border:1px solid rgba(0,232,255,0.16);
+  border-radius:2px;
+  color:var(--text-lo);
+  font-family:var(--f-mono); font-size:9px; letter-spacing:1px;
+  cursor:pointer; transition:all 0.18s; text-transform:uppercase;
+}
+.ib:hover { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 7px rgba(0,232,255,0.12); }
+.ib-p {
+  background:linear-gradient(135deg,rgba(0,96,200,0.1),rgba(0,232,255,0.07));
+  border-color:rgba(0,232,255,0.38); color:var(--cyan);
+}
+.ib-p:hover { background:linear-gradient(135deg,rgba(0,96,200,0.2),rgba(0,232,255,0.14)); box-shadow:var(--glow-s); }
+.inp-hint { font-family:var(--f-mono); font-size:9px; color:var(--text-lo); display:flex; gap:7px; align-items:center; }
+kbd {
+  background:rgba(0,232,255,0.06); border:1px solid rgba(0,232,255,0.16);
+  border-radius:2px; padding:1px 4px;
+  font-family:var(--f-mono); font-size:8px; color:var(--cyan);
+}
+
+/* Quota mini-bar in tag */
+.qw { width:50px; height:3px; background:rgba(0,232,255,0.1); border-radius:2px; display:inline-block; overflow:hidden; vertical-align:middle; margin:0 2px; }
+.qf { height:100%; background:linear-gradient(90deg,var(--blue),var(--cyan)); border-radius:2px; }
+
+</style>
+</head>
+<body class="state-idle">
+
+<!-- ── BOOT ── -->
+<div id="boot">
+  <div class="boot-logo">JARVIS</div>
+  <div class="boot-sub">AI-OS v4.2.1 // HYPRLAND // INITIALIZING NEURAL CORE…</div>
+  <div class="boot-track"><div class="boot-fill"></div></div>
+</div>
+
+<!-- ── APP ── -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="logo-wrap">
+      <svg class="logo-svg" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <polygon points="18,2 33,10 33,26 18,34 3,26 3,10" stroke="#00e8ff" stroke-width="1.5" fill="rgba(0,232,255,0.05)"/>
+        <polygon points="18,7.5 27.5,12.7 27.5,23.3 18,28.5 8.5,23.3 8.5,12.7" stroke="#00e8ff" stroke-width="0.7" fill="rgba(0,232,255,0.07)" opacity="0.65"/>
+        <circle cx="18" cy="18" r="5.5" fill="rgba(0,232,255,0.22)" stroke="#00e8ff" stroke-width="1"/>
+        <circle cx="18" cy="18" r="2.8" fill="#00e8ff" opacity="0.88"/>
+        <circle cx="18" cy="18" r="1.1" fill="white"/>
+      </svg>
+      <div>
+        <div class="logo-name">JARVIS</div>
+        <div class="logo-build">AI-OS v4.2.1 // HYPRLAND COMPOSITOR // PYTHON RUNTIME</div>
+      </div>
+    </div>
+
+    <div class="hdr-badges">
+      <div class="badge"><div class="led led-g"></div>CORE ONLINE</div>
+      <div class="badge"><div class="led led-c"></div>AI ACTIVE</div>
+      <div class="badge"><div class="led led-b"></div>SECURE CHANNEL</div>
+    </div>
+
+    <div class="hdr-clock">
+      <div class="clk-t" id="clkT">--:--:--</div>
+      <div class="clk-d" id="clkD">--- -- ---- UTC</div>
+    </div>
+  </header>
+
+  <!-- TERMINAL PANEL -->
+  <div class="panel" id="terminal">
+    <div class="brk-tr"></div><div class="brk-bl"></div>
+    <div class="ph">
+      <div class="ph-l">
+        <div class="led led-g"></div>
+        SYS.LOG // TTY0
+      </div>
+      <div class="ph-r" id="log-cnt">0 ENTRIES</div>
+    </div>
+    <div id="term-out"></div>
+    <div class="term-foot">
+      <span class="tps">jarvis@ai-os:~$</span>&nbsp;<span class="tcur"></span>
+    </div>
+  </div>
+
+  <!-- AI CORE CENTER -->
+  <div id="core">
+    <div id="core-amb"></div>
+
+    <div class="viz-wrap">
+      <canvas id="viz-canvas"></canvas>
+      <svg id="viz-svg" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="cg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#00e8ff" stop-opacity="0.92"/>
+            <stop offset="30%"  stop-color="#0055cc" stop-opacity="0.65"/>
+            <stop offset="65%"  stop-color="#001e6e" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="#000a20" stop-opacity="0.96"/>
+          </radialGradient>
+          <radialGradient id="hg" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#00e8ff" stop-opacity="0.18"/>
+            <stop offset="55%"  stop-color="#00e8ff" stop-opacity="0.04"/>
+            <stop offset="100%" stop-color="#00e8ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="fg"  x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3.5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="fg2" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="11" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        <!-- Background halos -->
+        <circle cx="200" cy="200" r="192" stroke="rgba(0,232,255,0.025)" stroke-width="0.5" fill="none"/>
+        <circle cx="200" cy="200" r="180" stroke="rgba(0,232,255,0.035)" stroke-width="0.5" fill="none"/>
+
+        <!-- Ring 1: outer dashed, slow CW -->
+        <g class="rr rr1">
+          <circle cx="200" cy="200" r="168" stroke="rgba(0,232,255,0.2)" stroke-width="1.5" fill="none" stroke-dasharray="5 11" filter="url(#fg)"/>
+        </g>
+
+        <!-- Ring 2: tick marks, CCW — built by JS -->
+        <g class="rr rr2" id="tick-ring"></g>
+
+        <!-- Ring 3: multi-arc, fast CW -->
+        <g class="rr rr3">
+          <circle cx="200" cy="200" r="140" stroke="#00e8ff" stroke-width="2.2" fill="none"
+            stroke-dasharray="72 30 42 110 18 78" opacity="0.52" filter="url(#fg)"/>
+        </g>
+
+        <!-- Ring 4: fine dots, slow CCW -->
+        <g class="rr rr4">
+          <circle cx="200" cy="200" r="123" stroke="rgba(0,232,255,0.16)" stroke-width="1" fill="none" stroke-dasharray="2 7"/>
+        </g>
+
+        <!-- Ring 5: inner arcs, medium CW -->
+        <g class="rr rr5">
+          <circle cx="200" cy="200" r="107" stroke="rgba(77,143,255,0.38)" stroke-width="1.8" fill="none"
+            stroke-dasharray="48 22 18 62" filter="url(#fg)"/>
+        </g>
+
+        <!-- Wave rings — visible during listening -->
+        <g>
+          <circle cx="200" cy="200" r="70" stroke="rgba(0,232,255,0.5)"  stroke-width="2"   fill="none" class="wave-ring"/>
+          <circle cx="200" cy="200" r="70" stroke="rgba(0,232,255,0.32)" stroke-width="1.5" fill="none" class="wave-ring"/>
+          <circle cx="200" cy="200" r="70" stroke="rgba(0,232,255,0.16)" stroke-width="1"   fill="none" class="wave-ring"/>
+        </g>
+
+        <!-- Core halo -->
+        <circle cx="200" cy="200" r="88" fill="url(#hg)" id="core-halo"/>
+
+        <!-- Core body -->
+        <circle cx="200" cy="200" r="66" fill="url(#cg)" id="core-circle" filter="url(#fg2)"/>
+
+        <!-- Core inner detail -->
+        <circle cx="200" cy="200" r="53" stroke="rgba(0,232,255,0.42)" stroke-width="1"   fill="none"/>
+        <circle cx="200" cy="200" r="41" stroke="rgba(0,232,255,0.18)" stroke-width="0.7" fill="rgba(0,232,255,0.025)"/>
+
+        <!-- Crosshairs -->
+        <g stroke="rgba(0,232,255,0.48)" stroke-width="1.5" stroke-linecap="round">
+          <line x1="200" y1="150" x2="200" y2="162"/>
+          <line x1="200" y1="238" x2="200" y2="250"/>
+          <line x1="150" y1="200" x2="162" y2="200"/>
+          <line x1="238" y1="200" x2="250" y2="200"/>
+        </g>
+        <!-- 45° ticks -->
+        <g stroke="rgba(0,232,255,0.28)" stroke-width="1" stroke-linecap="round">
+          <line x1="200" y1="150" x2="200" y2="158" transform="rotate(45 200 200)"/>
+          <line x1="200" y1="150" x2="200" y2="158" transform="rotate(135 200 200)"/>
+          <line x1="200" y1="150" x2="200" y2="158" transform="rotate(225 200 200)"/>
+          <line x1="200" y1="150" x2="200" y2="158" transform="rotate(315 200 200)"/>
+        </g>
+
+        <!-- Center dot -->
+        <circle cx="200" cy="200" r="7.5" fill="rgba(0,232,255,0.55)" filter="url(#fg)"/>
+        <circle cx="200" cy="200" r="3.8" fill="#00e8ff"/>
+        <circle cx="200" cy="200" r="1.6" fill="white" opacity="0.92"/>
+
+        <!-- Orbiting label text -->
+        <path id="op" d="M 200,200 m -155,0 a 155,155 0 1,1 310,0" fill="none"/>
+        <text font-family="'Share Tech Mono',monospace" font-size="7.5" fill="rgba(0,232,255,0.28)" letter-spacing="4.5">
+          <textPath href="#op"> JARVIS AI-CORE v4.2.1 ◆ NEURAL-NET ACTIVE ◆ QUANTUM-PROC ◆ SECURE LINK ◆ </textPath>
+        </text>
+      </svg>
+    </div>
+
+    <div class="core-lbl">
+      <div id="cst">IDLE</div>
+      <div id="css">AWAITING INPUT — ALL SYSTEMS NOMINAL</div>
+    </div>
+
+    <div class="sctrl">
+      <button class="sb on" data-s="idle"       onclick="setS('idle')">IDLE</button>
+      <button class="sb"    data-s="listening"  onclick="setS('listening')">LISTEN</button>
+      <button class="sb"    data-s="speaking"   onclick="setS('speaking')">SPEAK</button>
+      <button class="sb"    data-s="processing" onclick="setS('processing')">PROC.</button>
+    </div>
+  </div>
+
+  <!-- STATS PANEL -->
+  <div class="panel" id="stats">
+    <div class="brk-tr"></div><div class="brk-bl"></div>
+    <div class="ph">
+      <div class="ph-l"><div class="led led-c"></div>SYS.MONITOR</div>
+      <div class="ph-r">LIVE</div>
+    </div>
+
+    <div class="ss">
+
+      <!-- 2×2 stat boxes -->
+      <div class="sgrid">
+        <div class="sbox"><div class="sv" id="sv-cpu">--</div><div class="sl">CPU</div></div>
+        <div class="sbox"><div class="sv" id="sv-ram">--</div><div class="sl">RAM</div></div>
+        <div class="sbox"><div class="sv" id="sv-gpu">--</div><div class="sl">GPU</div></div>
+        <div class="sbox"><div class="sv" id="sv-tmp">--</div><div class="sl">TEMP</div></div>
+      </div>
+
+      <!-- CPU Cores -->
+      <div class="sec">
+        <div class="stitle">CPU CORES <span class="stv">8T // 16C</span></div>
+        <div id="cores-wrap"></div>
+      </div>
+
+      <!-- Memory -->
+      <div class="sec">
+        <div class="stitle">MEMORY</div>
+        <div class="mr"><span class="ml">RAM</span> <div class="mbw"><div class="mb mbc" id="b-ram" style="width:0%"></div></div><span class="mv" id="v-ram">-</span></div>
+        <div class="mr"><span class="ml">SWAP</span><div class="mbw"><div class="mb mbb" id="b-swp" style="width:0%"></div></div><span class="mv" id="v-swp">-</span></div>
+        <div class="mr"><span class="ml">VRAM</span><div class="mbw"><div class="mb mbg" id="b-vrm" style="width:0%"></div></div><span class="mv" id="v-vrm">-</span></div>
+      </div>
+
+      <!-- Network -->
+      <div class="sec">
+        <div class="stitle">NETWORK</div>
+        <div class="mr"><span class="ml" style="color:var(--green)">↑ UP</span> <div class="mbw"><div class="mb mbg" id="b-nup" style="width:0%"></div></div><span class="mv" style="color:var(--green)" id="v-nup">-</span></div>
+        <div class="mr"><span class="ml" style="color:var(--cyan)">↓ DN</span>  <div class="mbw"><div class="mb mbc" id="b-ndn" style="width:0%"></div></div><span class="mv" id="v-ndn">-</span></div>
+      </div>
+
+      <!-- Swarm Agents -->
+      <div class="sec">
+        <div class="stitle">SWARM AGENTS <span class="stv" id="agh">—</span></div>
+        <div id="agent-list"></div>
+      </div>
+
+      <!-- AI Context -->
+      <div class="sec">
+        <div class="stitle">AI CONTEXT</div>
+        <div class="mr"><span class="ml">TOKENS</span><div class="mbw"><div class="mb mby" style="width:58%"></div></div><span class="mv" style="color:var(--yellow)">58%</span></div>
+        <div class="mr"><span class="ml">CTX WIN</span><div class="mbw"><div class="mb mbb" style="width:44%"></div></div><span class="mv">44%</span></div>
+        <div class="mr"><span class="ml">EMBEDS</span> <div class="mbw"><div class="mb mbg" style="width:34%"></div></div><span class="mv" style="color:var(--green)">1.2k</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- INPUT AREA -->
+  <div id="input-area">
+    <div class="inp-tags">
+      <div class="itag"><i class="fa-solid fa-folder-open"></i><span>DIR:</span><span class="tv">/home/user/jarvis-os</span></div>
+      <div class="itag">
+        <i class="fa-solid fa-chart-simple"></i><span>QUOTA:</span>
+        <span class="qw"><span class="qf" style="width:72%"></span></span>
+        <span class="tv">72%</span>
+      </div>
+      <div class="itag"><i class="fa-solid fa-microchip"></i><span>MODEL:</span><span class="tv">claude-sonnet-4-6</span></div>
+      <div class="itag"><i class="fa-regular fa-circle-dot" style="color:var(--green)"></i><span>CTX:</span><span class="tv" style="color:var(--green)">ACTIVE</span></div>
+      <div class="itag"><i class="fa-solid fa-bolt" style="color:var(--yellow)"></i><span>TOKENS:</span><span class="tv" id="tok-ctr">87,241 / 200k</span></div>
+    </div>
+
+    <div class="inp-div"></div>
+
+    <div class="inp-row">
+      <span class="inp-caret">❯</span>
+      <input type="text" id="cmd" placeholder="Ask Jarvis anything, or enter a bash command…" autocomplete="off" spellcheck="false"/>
+      <div class="inp-btns">
+        <button class="ib" onclick="clrCmd()"><i class="fa-solid fa-xmark"></i> CLR</button>
+        <button class="ib" id="voice-btn" onclick="toggleListen()"><i class="fa-solid fa-microphone"></i> VOICE</button>
+        <button class="ib ib-p" onclick="sendCmd()"><i class="fa-solid fa-paper-plane"></i> SEND</button>
+        <div class="inp-hint"><kbd>↵</kbd>&nbsp;SEND&nbsp;&nbsp;<kbd>↑↓</kbd>&nbsp;HIST&nbsp;&nbsp;<kbd>ESC</kbd>&nbsp;CLR</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /#app -->
+
+<script>
+/* ═══════════════════════════════════════════════════
+   JARVIS HUD — Runtime  //  All vanilla JS
+═══════════════════════════════════════════════════ */
+
+/* ── CLOCK ─────────────────────────────────── */
+const DAYS   = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+function tick() {
+  const n = new Date();
+  const pad = x => String(x).padStart(2,'0');
+  document.getElementById('clkT').textContent =
+    `${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;
+  document.getElementById('clkD').textContent =
+    `${DAYS[n.getDay()]} ${pad(n.getDate())} ${MONTHS[n.getMonth()]} ${n.getFullYear()} LOCAL`;
+}
+tick(); setInterval(tick, 1000);
+
+/* ── TERMINAL ──────────────────────────────── */
+const termOut = document.getElementById('term-out');
+let logCount = 0;
+let backendOnline = false;
+
+const BOOT = [
+  ['sys','Booting JARVIS AI-OS v4.2.1…'],
+  ['sys','Mounting Hyprland compositor WL-5… <span class="ec">OK</span>'],
+  ['sys','Loading kernel modules: nvidia, i2c_hid, uinput… <span class="ec">OK</span>'],
+  ['ok', 'Wayland display server active on <span class="ec">:0</span>'],
+  ['ai', 'Initialising neural net: <span class="ec">claude-sonnet-4-6</span>'],
+  ['net','Establishing TLS 1.3 tunnel to <span class="ec">api.anthropic.com</span>…'],
+  ['ok', 'Secure connection established — latency <span class="ec">28ms</span>'],
+  ['sys','Memory subsystem ready: <span class="ec">200k token context window</span>'],
+  ['sys','FAISS vector index loaded: <span class="ec">1,247 embeddings</span>'],
+  ['ai', 'Swarm ALPHA-01 [TaskRouter] → <span class="ec">READY</span>'],
+  ['ai', 'Swarm BETA-07  [CodeGen]    → <span class="ec">READY</span>'],
+  ['ai', 'Swarm GAMMA-03 [WebScraper] → <span class="ec">READY</span>'],
+  ['ai', 'Swarm DELTA-04 [Researcher] → <span class="ec">READY</span>'],
+  ['sys','Thermal: CPU <span class="ec">52°C</span>  GPU <span class="ec">48°C</span>  — <span class="eg">NOMINAL</span>'],
+  ['ok', '<span class="ec">ALL SYSTEMS OPERATIONAL</span> — JARVIS standing by.'],
+];
+
+const LIVE = [
+  ['sys','inotifywait: <span class="ec">~/.config/jarvis/</span> ← modified'],
+  ['ai', 'ALPHA-01: queue polled — <span class="ec">0 pending</span> items'],
+  ['net','DNS: api.anthropic.com → <span class="ec">18.234.211.x</span>'],
+  ['warn','Token budget at <span class="ey">72 %</span>. Consider compressing context.'],
+  ['ai', 'BETA-07: code-review complete — <span class="eg">0 critical issues</span>'],
+  ['ai', 'GAMMA-03: rate-limited. Retry in <span class="ec">30 s</span>.'],
+  ['sys','CPU avg 5 min: <span class="ec">14 %</span>  RAM: <span class="ec">13.4 / 32 GB</span>'],
+  ['net','WS heartbeat <span class="eg">OK</span> — rtt <span class="ec">31 ms</span>'],
+  ['ai', 'DELTA-04: web search → <span class="ec">12 results</span>'],
+  ['sys','Cron: model update check — <span class="eg">up to date</span>'],
+  ['ai', 'Context window: <span class="ec">87,241 / 200,000 tokens</span>'],
+  ['ok', 'Whisper VAD warm — voice pipeline <span class="ec">READY</span>'],
+  ['sys','GPU VRAM: <span class="ec">3.2 / 8 GB</span>'],
+  ['ai', 'EPS-02: watching <span class="ec">17 paths</span>'],
+  ['net','↑ 12.4 Kbps  ↓ <span class="ec">2.1 Mbps</span>'],
+  ['ai', 'ZETA-05: memory compacted — <span class="ec">42 %</span> ctx freed'],
+  ['sys','Processes: 312  Load: 0.94 / 0.88 / 0.82'],
+  ['err','GAMMA-03: ConnectionTimeout → <span class="er">fallback proxy</span> active'],
+  ['ai', 'ETA-06: piper-tts loaded — speech ready'],
+  ['sys','Hyprland: <span class="ec">3 workspaces</span>, 8 windows'],
+];
+
+function addLog(tag, html) {
+  const n = new Date();
+  const p = x => String(x).padStart(2,'0');
+  const ts = `${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}`;
+  const d = document.createElement('div');
+  d.className = 'll';
+  d.innerHTML = `<span class="lt">${ts}</span><span class="lk lk-${tag}">${tag.toUpperCase()}</span><span class="lm">${html}</span>`;
+  termOut.appendChild(d);
+  termOut.scrollTop = termOut.scrollHeight;
+  logCount++;
+  document.getElementById('log-cnt').textContent = `${logCount} ENTRIES`;
+  return d.querySelector('.lm');
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+/* Boot sequence, then live stream */
+let bi = 0;
+(function bootSeq() {
+  if (bi < BOOT.length) {
+    const [t, m] = BOOT[bi++];
+    addLog(t, m);
+    setTimeout(bootSeq, 110 + Math.random() * 180);
+  } else {
+    let li = 0;
+    setInterval(() => {
+      if (backendOnline && Math.random() > 0.25) return;
+      const [t, m] = LIVE[li++ % LIVE.length];
+      addLog(t, m);
+    }, 2900 + Math.random() * 2800);
+  }
+})();
+
+async function checkBackend() {
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' });
+    const data = await res.json();
+    backendOnline = !!data.ok;
+    if (backendOnline) {
+      addLog('ok', `HUD bridge online — pid <span class="ec">${escapeHtml(data.pid)}</span>`);
+    }
+  } catch {
+    backendOnline = false;
+    addLog('warn', 'HUD bridge unavailable — static demo mode active');
+  }
+}
+setTimeout(checkBackend, 3300);
+
+/* ── SVG TICK RING ─────────────────────────── */
+(function buildTicks() {
+  const g   = document.getElementById('tick-ring');
+  const CX  = 200, CY = 200, R = 153;
+  for (let i = 0; i < 72; i++) {
+    const a   = (i / 72) * Math.PI * 2 - Math.PI / 2;
+    const maj = i % 6 === 0, mid = i % 3 === 0;
+    const len = maj ? 10 : mid ? 6 : 3;
+    const op  = maj ? 0.68 : mid ? 0.38 : 0.18;
+    const sw  = maj ? 1.5 : 1;
+    const x1 = CX + Math.cos(a) * R,       y1 = CY + Math.sin(a) * R;
+    const x2 = CX + Math.cos(a) * (R-len), y2 = CY + Math.sin(a) * (R-len);
+    const ln = document.createElementNS('http://www.w3.org/2000/svg','line');
+    ln.setAttribute('x1', x1.toFixed(2)); ln.setAttribute('y1', y1.toFixed(2));
+    ln.setAttribute('x2', x2.toFixed(2)); ln.setAttribute('y2', y2.toFixed(2));
+    ln.setAttribute('stroke', '#00e8ff');
+    ln.setAttribute('stroke-width', sw);
+    ln.setAttribute('opacity', op);
+    g.appendChild(ln);
+  }
+})();
+
+/* ── CANVAS WAVEFORM ───────────────────────── */
+const cvs = document.getElementById('viz-canvas');
+const ctx = cvs.getContext('2d');
+let phase = 0;
+
+function resizeCvs() {
+  cvs.width  = cvs.offsetWidth;
+  cvs.height = cvs.offsetHeight;
+}
+resizeCvs();
+window.addEventListener('resize', resizeCvs);
+
+const CORE_RATIO = 0.18; // core radius / canvas side
+
+function drawViz() {
+  const W = cvs.width, H = cvs.height;
+  const CX = W/2, CY = H/2;
+  const R  = Math.min(W, H) * CORE_RATIO;
+
+  ctx.clearRect(0, 0, W, H);
+
+  switch (curState) {
+
+    case 'idle': {
+      /* Soft breathing ring */
+      const s = 0.07 + 0.05 * Math.sin(phase * 0.022);
+      ctx.beginPath();
+      ctx.arc(CX, CY, R * (1 + s), 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(0,232,255,${0.055 + 0.03*Math.sin(phase*0.022)})`;
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      break;
+    }
+
+    case 'listening': {
+      /* Circular bar visualiser */
+      const bars = 80;
+      for (let i = 0; i < bars; i++) {
+        const a = (i/bars)*Math.PI*2 - Math.PI/2;
+        const n = Math.abs(Math.sin(phase*0.07 + i*0.38 + Math.cos(i*0.21)*1.6));
+        const len = R * 0.28 * n;
+        ctx.beginPath();
+        ctx.moveTo(CX + Math.cos(a)*R,       CY + Math.sin(a)*R);
+        ctx.lineTo(CX + Math.cos(a)*(R+len), CY + Math.sin(a)*(R+len));
+        ctx.strokeStyle = `rgba(0,232,255,${0.28 + n*0.58})`;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+      }
+      /* Soft core shimmer */
+      ctx.beginPath();
+      ctx.arc(CX, CY, R * 0.52, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(0,232,255,${0.06 + 0.04*Math.sin(phase*0.11)})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      break;
+    }
+
+    case 'speaking': {
+      /* Radial frequency bars, hue-shifted */
+      const bars = 64;
+      for (let i = 0; i < bars; i++) {
+        const a = (i/bars)*Math.PI*2 - Math.PI/2;
+        const n = Math.abs(Math.sin(phase*0.19 + i*0.56 + Math.sin(i*0.41 + phase*0.035)*2.1));
+        const len = R * 0.42 * n;
+        const hue = 182 + n * 52;
+        ctx.beginPath();
+        ctx.moveTo(CX + Math.cos(a)*R,       CY + Math.sin(a)*R);
+        ctx.lineTo(CX + Math.cos(a)*(R+len), CY + Math.sin(a)*(R+len));
+        ctx.strokeStyle = `hsla(${hue},100%,65%,${0.38 + n*0.52})`;
+        ctx.lineWidth = 2.6;
+        ctx.stroke();
+      }
+      /* Inner pulsing arc */
+      ctx.beginPath();
+      ctx.arc(CX, CY, R*0.55, phase*0.11, phase*0.11 + Math.PI*(1.2+0.4*Math.sin(phase*0.05)));
+      ctx.strokeStyle = `hsla(190,100%,65%,0.35)`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      break;
+    }
+
+    case 'processing': {
+      /* Orbiting segments + spinning inner arc */
+      const segs = 16;
+      for (let i = 0; i < segs; i++) {
+        const a = (i/segs)*Math.PI*2 + phase*0.07;
+        const br = i%4===0 ? 1 : i%2===0 ? 0.5 : 0.22;
+        const len = R*(0.08 + 0.2*br);
+        ctx.beginPath();
+        ctx.moveTo(CX + Math.cos(a)*R,       CY + Math.sin(a)*R);
+        ctx.lineTo(CX + Math.cos(a)*(R+len), CY + Math.sin(a)*(R+len));
+        ctx.strokeStyle = `rgba(124,77,255,${0.28 + br*0.52})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+      const arc1Start = phase*0.09;
+      ctx.beginPath();
+      ctx.arc(CX, CY, R*0.58, arc1Start, arc1Start + Math.PI*1.3);
+      ctx.strokeStyle = 'rgba(124,77,255,0.45)';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(CX, CY, R*0.42, -arc1Start, -arc1Start + Math.PI*0.8);
+      ctx.strokeStyle = 'rgba(77,143,255,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      break;
+    }
+  }
+
+  phase++;
+  requestAnimationFrame(drawViz);
+}
+drawViz();
+
+/* ── STATE MACHINE ─────────────────────────── */
+let curState = 'idle';
+const STATE = {
+  idle:       { lbl:'IDLE',       sub:'AWAITING INPUT — ALL SYSTEMS NOMINAL' },
+  listening:  { lbl:'LISTENING',  sub:'VOICE INPUT ACTIVE — SPEAK NOW' },
+  speaking:   { lbl:'SPEAKING',   sub:'TTS SYNTHESIS ACTIVE — GENERATING AUDIO' },
+  processing: { lbl:'PROCESSING', sub:'NEURAL INFERENCE RUNNING — PLEASE WAIT…' },
+};
+
+function setS(s) {
+  curState = s;
+  document.body.className = `state-${s}`;
+  document.getElementById('cst').textContent = STATE[s].lbl;
+  document.getElementById('css').textContent = STATE[s].sub;
+  document.querySelectorAll('.sb').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+  // Update voice button visual
+  const vb = document.getElementById('voice-btn');
+  if (s === 'listening') {
+    vb.style.borderColor = 'var(--cyan)';
+    vb.style.color = 'var(--cyan)';
+    vb.style.boxShadow = 'var(--glow-s)';
+  } else {
+    vb.style.borderColor = '';
+    vb.style.color = '';
+    vb.style.boxShadow = '';
+  }
+  addLog('ai', `System state → <span class="ec">${STATE[s].lbl}</span>`);
+}
+
+function toggleListen() {
+  setS(curState === 'listening' ? 'idle' : 'listening');
+}
+
+/* ── SYSTEM STATS ──────────────────────────── */
+const sv  = { cpu:14, ram:42, gpu:30, tmp:52, swp:9, vrm:38, nup:14, ndn:52 };
+const tgt = {...sv};
+let backendStats = null;
+let netPrev = null;
+
+/* Build 8 CPU core rows */
+const cw = document.getElementById('cores-wrap');
+const CC  = ['mbc','mbb','mbg','mbb','mbc','mbg','mbb','mbc'];
+for (let i = 0; i < 8; i++) {
+  const r = document.createElement('div');
+  r.className = 'mr';
+  r.innerHTML = `<span class="ml">C${i}</span><div class="mbw"><div class="mb ${CC[i]}" id="cc${i}" style="width:0%"></div></div><span class="mv" id="cv${i}">-</span>`;
+  cw.appendChild(r);
+}
+
+const lerp = (a,b,t) => a + (b-a)*t;
+const jit  = (v,r,mn,mx) => Math.max(mn, Math.min(mx, v + (Math.random()-0.5)*r));
+
+async function pullBackendStats() {
+  try {
+    const res = await fetch('/api/stats', { cache: 'no-store' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'stats unavailable');
+
+    const now = performance.now();
+    if (netPrev) {
+      const dt = Math.max(0.5, (now - netPrev.t) / 1000);
+      data.net_up_mbps = Math.max(0, ((data.net_sent - netPrev.sent) * 8) / dt / 1000000);
+      data.net_down_mbps = Math.max(0, ((data.net_recv - netPrev.recv) * 8) / dt / 1000000);
+    }
+    netPrev = { t: now, sent: data.net_sent, recv: data.net_recv };
+    backendStats = data;
+    backendOnline = true;
+  } catch {
+    backendStats = null;
+  }
+}
+setInterval(pullBackendStats, 1500);
+pullBackendStats();
+
+function updateStats() {
+  if (backendStats) {
+    tgt.cpu = Math.max(1, Math.min(99, backendStats.cpu ?? tgt.cpu));
+    tgt.ram = Math.max(1, Math.min(99, backendStats.ram ?? tgt.ram));
+    tgt.gpu = jit(tgt.gpu, 16, 4, 96);
+    tgt.tmp = backendStats.temp_c ? Math.max(25, Math.min(98, backendStats.temp_c)) : jit(tgt.tmp, 2, 42, 92);
+    tgt.swp = Math.max(0, Math.min(99, backendStats.swap ?? tgt.swp));
+    tgt.vrm = jit(tgt.vrm, 8, 18, 92);
+    tgt.nup = Math.max(1, Math.min(99, (backendStats.net_up_mbps ?? 0.1) * 16));
+    tgt.ndn = Math.max(1, Math.min(99, (backendStats.net_down_mbps ?? 0.2) * 8));
+  } else {
+    tgt.cpu = jit(tgt.cpu, 28, 4, 96);
+    tgt.ram = jit(tgt.ram, 4,  30, 84);
+    tgt.gpu = jit(tgt.gpu, 30, 4, 96);
+    tgt.tmp = jit(tgt.tmp, 3,  42, 92);
+    tgt.swp = jit(tgt.swp, 5,  0,  28);
+    tgt.vrm = jit(tgt.vrm, 9,  18, 92);
+    tgt.nup = jit(tgt.nup, 20, 1,  80);
+    tgt.ndn = jit(tgt.ndn, 30, 4,  96);
+  }
+
+  for (const k in sv) sv[k] = lerp(sv[k], tgt[k], 0.24);
+  const r = x => Math.round(x);
+
+  document.getElementById('sv-cpu').textContent = r(sv.cpu) + '%';
+  document.getElementById('sv-ram').textContent = r(sv.ram) + '%';
+  document.getElementById('sv-gpu').textContent = r(sv.gpu) + '%';
+  const tmp = r(sv.tmp);
+  const te  = document.getElementById('sv-tmp');
+  te.textContent = tmp + '°C';
+  te.style.color = tmp > 82 ? 'var(--red)' : tmp > 70 ? 'var(--yellow)' : 'var(--green)';
+
+  document.getElementById('b-ram').style.width = sv.ram + '%';
+  document.getElementById('v-ram').textContent = backendStats ? `${backendStats.ram_used_gb}G` : (sv.ram * 0.32).toFixed(1) + 'G';
+  document.getElementById('b-swp').style.width = sv.swp + '%';
+  document.getElementById('v-swp').textContent = backendStats ? `${backendStats.swap_used_gb}G` : (sv.swp * 0.08).toFixed(1) + 'G';
+  document.getElementById('b-vrm').style.width = sv.vrm + '%';
+  document.getElementById('v-vrm').textContent = (sv.vrm * 0.08).toFixed(1) + 'G';
+  document.getElementById('b-nup').style.width = sv.nup + '%';
+  document.getElementById('v-nup').textContent = backendStats ? `${(backendStats.net_up_mbps ?? 0).toFixed(1)}M` : (sv.nup * 0.55).toFixed(0) + 'M';
+  document.getElementById('b-ndn').style.width = sv.ndn + '%';
+  document.getElementById('v-ndn').textContent = backendStats ? `${(backendStats.net_down_mbps ?? 0).toFixed(1)}M` : (sv.ndn * 0.48).toFixed(0) + 'M';
+
+  for (let i = 0; i < 8; i++) {
+    const liveCore = backendStats?.cpu_cores?.[i];
+    const p = Math.max(1, Math.min(99, liveCore ?? (sv.cpu + (Math.random()-0.5)*38)));
+    document.getElementById(`cc${i}`).style.width = p + '%';
+    document.getElementById(`cv${i}`).textContent = r(p) + '%';
+  }
+}
+setInterval(updateStats, 680);
+setTimeout(updateStats, 350);
+
+/* ── SWARM AGENTS ──────────────────────────── */
+const AGENTS = [
+  { id:'ALPHA-01', name:'TaskRouter',   task:'Polling queue',  s:'active', cpu:2  },
+  { id:'BETA-07',  name:'CodeGen',      task:'Ready',          s:'active', cpu:0  },
+  { id:'GAMMA-03', name:'WebScraper',   task:'Rate-limited',   s:'busy',   cpu:8  },
+  { id:'DELTA-04', name:'Researcher',   task:'Web search',     s:'busy',   cpu:14 },
+  { id:'EPS-02',   name:'FileSysWatch', task:'Watching',       s:'active', cpu:1  },
+  { id:'ZETA-05',  name:'MemoryMgr',   task:'Compacting',     s:'busy',   cpu:5  },
+  { id:'ETA-06',   name:'VoiceProc',   task:'Standby',        s:'idle',   cpu:0  },
+  { id:'THETA-08', name:'Scheduler',   task:'Idle',           s:'idle',   cpu:0  },
+];
+const AT = ['Polling queue','Idle','Processing','Running query','Watching','Standby',
+            'Executing…','Ready','Retry in 12s','Analysing','Fetching data','Compiling'];
+const AS = ['active','active','active','busy','idle'];
+
+function renderAgents() {
+  const list   = document.getElementById('agent-list');
+  const active = AGENTS.filter(a => a.s !== 'idle').length;
+  document.getElementById('agh').textContent = `${active} ACTIVE`;
+  list.innerHTML = '';
+  AGENTS.forEach(a => {
+    const cls = a.s === 'active' ? 'al-on' : a.s === 'busy' ? 'al-busy' : 'al-idle';
+    const d = document.createElement('div');
+    d.className = 'ag';
+    d.innerHTML =
+      `<div class="al ${cls}"></div>`+
+      `<div class="ai2"><div class="an"><span class="aid">[${a.id}]</span> ${a.name}</div>`+
+      `<div class="at">${a.task}</div></div>`+
+      `<div class="ac">${a.cpu}%</div>`;
+    list.appendChild(d);
+  });
+}
+renderAgents();
+setInterval(() => {
+  const i = Math.floor(Math.random() * AGENTS.length);
+  AGENTS[i].task = AT[Math.floor(Math.random() * AT.length)];
+  AGENTS[i].s    = AS[Math.floor(Math.random() * AS.length)];
+  AGENTS[i].cpu  = Math.floor(Math.random() * 24);
+  renderAgents();
+}, 3400);
+
+/* ── COMMAND INPUT ─────────────────────────── */
+const cmdEl = document.getElementById('cmd');
+const hist  = [];
+let   hIdx  = -1;
+
+cmdEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter')     { sendCmd(); return; }
+  if (e.key === 'ArrowUp')   { e.preventDefault(); if (hIdx < hist.length-1) { hIdx++; cmdEl.value = hist[hist.length-1-hIdx]; } }
+  if (e.key === 'ArrowDown') { e.preventDefault(); if (hIdx > 0) { hIdx--; cmdEl.value = hist[hist.length-1-hIdx]; } else { hIdx=-1; cmdEl.value=''; } }
+  if (e.key === 'Escape')    { cmdEl.value = ''; hIdx = -1; }
+});
+
+async function sendCmd() {
+  const v = cmdEl.value.trim();
+  if (!v) return;
+  hist.push(v); hIdx = -1;
+  addLog('sys', `<span class="ec">$ ${escapeHtml(v)}</span>`);
+  setS('processing');
+  cmdEl.value = '';
+
+  try {
+    const res = await fetch('/api/command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: v }),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.ok) throw new Error(data.error || 'Command rejected');
+
+    addLog('ai', `Task accepted — <span class="ec">${escapeHtml(data.task_id.slice(0, 8))}</span>`);
+    const stream = new EventSource(`/api/events/${data.task_id}`);
+
+    let currentTokenBlock = null;
+
+    stream.addEventListener('status', e => {
+      const payload = JSON.parse(e.data);
+      addLog('ai', escapeHtml(payload.message));
+      currentTokenBlock = null; // New status message means next tokens are a new block
+    });
+
+    stream.addEventListener('token', e => {
+      const payload = JSON.parse(e.data);
+      if (!currentTokenBlock) {
+        currentTokenBlock = addLog('ai', '');
+      }
+      currentTokenBlock.innerHTML += escapeHtml(payload.delta).replaceAll('\n', '<br>');
+      termOut.scrollTop = termOut.scrollHeight;
+    });
+
+    stream.addEventListener('result', e => {
+      const payload = JSON.parse(e.data);
+      setS('speaking');
+      addLog('ok', escapeHtml(payload.result).replaceAll('\n', '<br>'));
+    });
+
+    stream.addEventListener('agent_error', e => {
+      const payload = JSON.parse(e.data);
+      addLog('err', escapeHtml(payload.error));
+    });
+
+    stream.onerror = () => {
+      addLog('warn', 'Event stream interrupted — waiting for reconnect or completion');
+    };
+
+    stream.addEventListener('done', e => {
+      const payload = JSON.parse(e.data);
+      addLog('ok', `Execution complete in <span class="eg">${escapeHtml(payload.elapsed_s)}s</span>`);
+      setS('idle');
+      stream.close();
+      cmdEl.focus();
+    });
+  } catch (err) {
+    addLog('err', `HUD bridge error — <span class="er">${escapeHtml(err.message)}</span>`);
+    setS('idle');
+  }
+}
+
+function clrCmd() { cmdEl.value = ''; hIdx = -1; cmdEl.focus(); }
+
+/* Auto-focus: any keypress outside inputs refocuses cmd */
+document.addEventListener('keydown', e => {
+  if (document.activeElement !== cmdEl &&
+      !['INPUT','TEXTAREA'].includes(e.target.tagName) &&
+      !e.ctrlKey && !e.metaKey && !e.altKey)
+    cmdEl.focus();
+});
+setTimeout(() => cmdEl.focus(), 3400);
+
+/* Token counter subtle flicker */
+setInterval(() => {
+  const t = 87241 + Math.round((Math.random()-0.5)*300);
+  document.getElementById('tok-ctr').textContent = t.toLocaleString() + ' / 200k';
+}, 5200);
+
+</script>
+</body>
+</html>

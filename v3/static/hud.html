@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS V3 - HUD</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg: #0a0e14;
+      --panel: #111620;
+      --border: #1a2332;
+      --cyan: #00d4ff;
+      --cyan-dim: #00d4ff40;
+      --cyan-glow: #00d4ff20;
+      --text: #e0e6ed;
+      --text-dim: #6b7a8a;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+      --red: #ff4466;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .hud-container {
+      display: grid;
+      grid-template-columns: 280px 1fr 280px;
+      grid-template-rows: auto 1fr auto;
+      gap: 12px;
+      padding: 12px;
+      min-height: 100vh;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    }
+
+    .panel-title {
+      font-size: 10px;
+      letter-spacing: 3px;
+      color: var(--cyan);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    /* Header */
+    .header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 600;
+      color: var(--cyan);
+      text-shadow: 0 0 20px var(--cyan-dim);
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--green);
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green); }
+      50% { opacity: 0.5; box-shadow: 0 0 8px var(--green); }
+    }
+
+    /* Stats Panel (Left) */
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .stat-label { color: var(--text-dim); font-size: 11px; }
+    .stat-value { font-size: 14px; font-weight: 600; }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--cyan);
+      border-radius: 2px;
+      transition: width 0.5s ease;
+      box-shadow: 0 0 8px var(--cyan-dim);
+    }
+
+    .progress-fill.high { background: var(--yellow); box-shadow: 0 0 8px #ffcc0040; }
+    .progress-fill.critical { background: var(--red); box-shadow: 0 0 8px #ff446640; }
+
+    .stat-group {
+      margin-bottom: 24px;
+    }
+
+    .stat-group-title {
+      font-size: 9px;
+      letter-spacing: 2px;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Log Panel (Center) */
+    .log-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .log-feed {
+      flex: 1;
+      overflow-y: auto;
+      font-size: 11px;
+      line-height: 1.6;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .log-entry {
+      padding: 4px 0;
+      border-bottom: 1px solid var(--border);
+      opacity: 0;
+      animation: fadeIn 0.3s forwards;
+    }
+
+    @keyframes fadeIn { to { opacity: 1; } }
+
+    .log-time { color: var(--text-dim); margin-right: 8px; }
+    .log-level { margin-right: 8px; font-weight: 600; }
+    .log-level.INFO { color: var(--cyan); }
+    .log-level.WARN { color: var(--yellow); }
+    .log-level.ERROR { color: var(--red); }
+
+    /* Agents Panel (Right) */
+    .agent-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .agent-status {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+
+    .agent-status.active { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .agent-status.idle { background: var(--yellow); }
+    .agent-status.error { background: var(--red); }
+
+    .agent-name { flex: 1; font-size: 12px; }
+    .agent-task { font-size: 10px; color: var(--text-dim); }
+
+    /* Command Bar */
+    .command-bar {
+      grid-column: 1 / -1;
+      display: flex;
+      gap: 8px;
+    }
+
+    .command-input {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 18px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .command-input:focus {
+      border-color: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan-glow);
+    }
+
+    .command-input::placeholder { color: var(--text-dim); }
+
+    .send-btn {
+      background: var(--cyan);
+      border: none;
+      border-radius: 6px;
+      padding: 0 24px;
+      color: var(--bg);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: box-shadow 0.2s;
+    }
+
+    .send-btn:hover { box-shadow: 0 0 16px var(--cyan-dim); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Network stats */
+    .network-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .net-stat {
+      background: var(--bg);
+      padding: 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .net-stat-label { font-size: 9px; color: var(--text-dim); }
+    .net-stat-value { font-size: 12px; color: var(--cyan); margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <div class="hud-container">
+    <header class="panel header">
+      <div class="logo">JARVIS V3</div>
+      <div class="status-indicator">
+        <div class="status-dot"></div>
+        <span>SYSTEM ONLINE</span>
+      </div>
+    </header>
+
+    <!-- Stats Panel -->
+    <section class="panel">
+      <div class="panel-title">System Metrics</div>
+      
+      <div class="stat-group">
+        <div class="stat-group-title">Processor</div>
+        <div class="stat-row">
+          <span class="stat-label">CPU Usage</span>
+          <span class="stat-value" id="cpu-value">--</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="cpu-bar" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="stat-group-title">Memory</div>
+        <div class="stat-row">
+          <span class="stat-label">RAM</span>
+          <span class="stat-value" id="ram-value">--</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="ram-bar" style="width: 0%"></div>
+        </div>
+        <div class="stat-row" style="margin-top: 12px">
+          <span class="stat-label">Swap</span>
+          <span class="stat-value" id="swap-value">--</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="swap-bar" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="stat-group-title">Temperature</div>
+        <div class="stat-row">
+          <span class="stat-label">CPU Temp</span>
+          <span class="stat-value" id="temp-value">--</span>
+        </div>
+      </div>
+
+      <div class="stat-group">
+        <div class="stat-group-title">Network</div>
+        <div class="network-stats">
+          <div class="net-stat">
+            <div class="net-stat-label">UP</div>
+            <div class="net-stat-value" id="net-up">--</div>
+          </div>
+          <div class="net-stat">
+            <div class="net-stat-label">DOWN</div>
+            <div class="net-stat-value" id="net-down">--</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Log Panel -->
+    <section class="panel log-panel">
+      <div class="panel-title">Live Feed</div>
+      <div class="log-feed" id="log-feed"></div>
+    </section>
+
+    <!-- Agents Panel -->
+    <section class="panel">
+      <div class="panel-title">Agents</div>
+      <div id="agent-list"></div>
+    </section>
+
+    <!-- Command Bar -->
+    <div class="command-bar">
+      <input type="text" class="command-input" id="cmd-input" placeholder="Enter command..." autocomplete="off">
+      <button class="send-btn" id="send-btn">SEND</button>
+    </div>
+  </div>
+
+  <script>
+    const logFeed = document.getElementById('log-feed');
+    const agentList = document.getElementById('agent-list');
+    const cmdInput = document.getElementById('cmd-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    // Format bytes to human readable
+    function formatBytes(bytes) {
+      if (bytes === 0) return '0 B/s';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i] + '/s';
+    }
+
+    // Update progress bar with appropriate color class
+    function updateBar(id, value) {
+      const bar = document.getElementById(id);
+      bar.style.width = value + '%';
+      bar.classList.remove('high', 'critical');
+      if (value >= 90) bar.classList.add('critical');
+      else if (value >= 70) bar.classList.add('high');
+    }
+
+    // Fetch stats every 2 seconds
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        if (!res.ok) throw new Error('Stats fetch failed');
+        const data = await res.json();
+
+        document.getElementById('cpu-value').textContent = data.cpu.toFixed(1) + '%';
+        updateBar('cpu-bar', data.cpu);
+
+        document.getElementById('ram-value').textContent = data.ram_pct.toFixed(1) + '%';
+        updateBar('ram-bar', data.ram_pct);
+
+        document.getElementById('swap-value').textContent = data.swap_pct.toFixed(1) + '%';
+        updateBar('swap-bar', data.swap_pct);
+
+        document.getElementById('temp-value').textContent = 
+          data.temp ? data.temp.toFixed(0) + '°C' : 'N/A';
+
+        document.getElementById('net-up').textContent = formatBytes(data.net_up || 0);
+        document.getElementById('net-down').textContent = formatBytes(data.net_down || 0);
+      } catch (e) {
+        console.warn('Stats error:', e.message);
+      }
+    }
+
+    // Fetch agents every 3 seconds
+    async function fetchAgents() {
+      try {
+        const res = await fetch('/api/agents');
+        if (!res.ok) throw new Error('Agents fetch failed');
+        const agents = await res.json();
+
+        agentList.innerHTML = agents.map(a => `
+          <div class="agent-item">
+            <div class="agent-status ${a.status}"></div>
+            <div>
+              <div class="agent-name">${escapeHtml(a.name)}</div>
+              <div class="agent-task">${escapeHtml(a.task || 'Idle')}</div>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.warn('Agents error:', e.message);
+      }
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+    }
+
+    // Add log entry
+    function addLog(entry) {
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      const time = new Date(entry.timestamp || Date.now()).toLocaleTimeString();
+      div.innerHTML = `
+        <span class="log-time">${time}</span>
+        <span class="log-level ${entry.level}">${entry.level}</span>
+        <span>${escapeHtml(entry.message)}</span>
+      `;
+      logFeed.insertBefore(div, logFeed.firstChild);
+      
+      // Keep only last 100 entries
+      while (logFeed.children.length > 100) {
+        logFeed.removeChild(logFeed.lastChild);
+      }
+    }
+
+    // Connect to SSE stream
+    function connectSSE() {
+      const evtSource = new EventSource('/api/stream');
+      
+      evtSource.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          addLog(data);
+        } catch {
+          addLog({ level: 'INFO', message: e.data });
+        }
+      };
+
+      evtSource.onerror = () => {
+        console.warn('SSE connection lost, retrying...');
+        evtSource.close();
+        setTimeout(connectSSE, 3000);
+      };
+    }
+
+    // Send command
+    async function sendCommand() {
+      const cmd = cmdInput.value.trim();
+      if (!cmd) return;
+
+      sendBtn.disabled = true;
+      cmdInput.disabled = true;
+
+      try {
+        const res = await fetch('/api/command', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: cmd })
+        });
+
+        if (res.ok) {
+          cmdInput.value = '';
+          addLog({ level: 'INFO', message: `> ${cmd}` });
+        } else {
+          addLog({ level: 'ERROR', message: 'Command failed' });
+        }
+      } catch (e) {
+        addLog({ level: 'ERROR', message: 'Connection error' });
+      } finally {
+        sendBtn.disabled = false;
+        cmdInput.disabled = false;
+        cmdInput.focus();
+      }
+    }
+
+    // Event listeners
+    sendBtn.addEventListener('click', sendCommand);
+    cmdInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendCommand();
+    });
+
+    // Initialize
+    fetchStats();
+    fetchAgents();
+    connectSSE();
+
+    setInterval(fetchStats, 2000);
+    setInterval(fetchAgents, 3000);
+  </script>
+</body>
+</html>
