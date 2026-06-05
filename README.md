@@ -1,49 +1,35 @@
-# JARVIS Unified Project
+# JARVIS — Unified AI OS
 
-Combined V2 and V3 codebase for JARVIS AI OS.
+Single-package agent architecture. Async-first with sync fallbacks.
 
 ## Structure
 
 ```
 JARVIS/
-├── v2/              # Refined V2 modules (flat, backward-compatible)
+├── jarvis/              # Unified package (all modules)
 │   ├── config.py
 │   ├── agent.py
 │   ├── api_manager.py
 │   ├── tools.py
-│   ├── orchestrator.py
-│   ├── swarm.py
-│   ├── planner.py
-│   ├── memory.py
-│   ├── daemon.py
-│   ├── world_model.py
-│   ├── self_evolution.py
-│   ├── confidence.py
-│   ├── debate.py
-│   ├── ...
-│   └── tests/
-├── v3/              # V3 async-first architecture
-│   ├── src/jarvis_v3/
-│   │   ├── config.py
-│   │   ├── agent.py
-│   │   ├── api_manager.py
-│   │   ├── tools.py
-│   │   ├── compat/       # V2↔V3 bridge
-│   │   └── plugins/      # External tool integrations
-│   └── tests/
-├── examples/         # Runnable demos
-├── docs/             # Audit reports and documentation
-└── pyproject.toml    # Unified project config
+│   ├── obsidian_brain.py   # Canonical brain — structured markdown vault
+│   ├── skill_system.py     # Auto-discovered skills
+│   ├── memdir.py           # Typed memory with decay
+│   ├── coordinator.py      # Multi-agent fork
+│   ├── context_engine.py   # Intent classifier
+│   ├── compat/             # Async↔Sync bridge
+│   ├── plugins/            # External tool integrations
+│   └── apps/               # Desktop app connectors
+├── tests/               # Flat test suite
+├── examples/            # Runnable demos
+├── docs/                # Documentation + archive
+└── pyproject.toml       # Project config
 ```
 
-## Testing
+## Quick Start
 
 ```bash
-# V2 tests
-PYTHONPATH=v2 pytest v2/tests/ -v
-
-# V3 tests
-PYTHONPATH=v3/src pytest v3/tests/ -v
+pip install -e .
+PYTHONPATH=. pytest tests/ -q
 ```
 
 ## External Tool Plugins
