@@ -73,6 +73,27 @@ def add_session_turn(session_id: str, role: str, content: str) -> None:
     _sessions[session_id].append({"role": role, "content": content})
     LOG.debug("Added turn to session %s: %s", session_id, content[:50])
     _save_sessions()
+    # Mirror to Obsidian (non-breaking)
+    _mirror_to_obsidian(session_id, list(_sessions[session_id]))
+
+
+def _mirror_to_obsidian(session_id: str, messages: list[dict[str, str]]) -> None:
+    """Mirror session to Obsidian Brain (optional, non-breaking)."""
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        content_lines = [f"## Session {session_id}"]
+        for msg in messages:
+            role = msg.get("role", "?")
+            content_lines.append(f"\n**{role}**: {msg.get('content', '')}")
+        content = "\n".join(content_lines)
+        ObsidianBrain().create_note(
+            name=f"session_{session_id}",
+            content=content,
+            folder="sessions",
+            tags=["session"],
+        )
+    except Exception:
+        pass  # non-breaking mirror
 
 
 def clear_session(session_id: str) -> None:

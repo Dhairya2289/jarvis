@@ -27,7 +27,7 @@ MIN_SESSIONS: Final[int] = 5
 SCAN_INTERVAL_S: Final[int] = 600
 LOCK_FILE: Final[Path] = BASE_DIR / ".dream.lock"
 STATE_FILE: Final[Path] = BASE_DIR / ".dream_state.json"
-MEMORY_FILE: Final[Path] = BASE_DIR / "MEMORY.md"
+MEMORY_FILE: Final[Path] = Path.home() / ".jarvis" / "obsidian" / "memory" / "consolidated_latest.md"
 
 
 def _read_state() -> dict[str, str]:
@@ -169,18 +169,54 @@ def _run_consolidation() -> str:
 
 
 def _update_memory(new_content: str) -> None:
-    """Append or overwrite MEMORY.md with the consolidated output."""
+    """Write consolidated output to ObsidianBrain; fall back to MEMORY_FILE."""
+    iso_date = _now().strftime("%Y-%m-%dT%H:%M:%S")
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        brain = ObsidianBrain()
+        # Prune: keep only last 3 consolidation notes in memory/ folder
+        existing = brain.list_notes(folder="memory")
+        consolidation_notes = [n for n in existing if "consolidation" in (n.get("frontmatter", {}).get("tags", []) or [])]
+        if len(consolidation_notes) >= 3:
+            for note in consolidation_notes[:-3]:
+                try:
+                    brain.update_note(note["name"], content="", folder="memory", tags=[])
+                except Exception:
+                    pass
+        note_name = f"consolidated_{_now().strftime('%Y-%m-%d')}"
+        try:
+            brain.create_note(
+                note_name,
+                new_content,
+                folder="memory",
+                tags=["consolidation", "auto-dream"],
+                metadata={"consolidated_at": iso_date},
+            )
+        except FileExistsError:
+            brain.update_note(
+                note_name,
+                new_content,
+                folder="memory",
+                tags=["consolidation", "auto-dream"],
+                metadata={"consolidated_at": iso_date},
+            )
+        _log.info("[DREAM] Wrote consolidation note to ObsidianBrain: memory/%s", note_name)
+    except Exception as exc:
+        _log.warning("[DREAM] ObsidianBrain unavailable (%s), falling back to MEMORY_FILE", exc)
+        _update_memory_fallback(new_content, iso_date)
+
+
+def _update_memory_fallback(new_content: str, iso_date: str) -> None:
+    """Fallback MEMORY_FILE writer when ObsidianBrain is unavailable."""
     MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
-    header = f"# JARVIS Memory\n\n*Auto-consolidated at {_now().isoformat()}*\n\n"
+    header = f"# JARVIS Memory\n\n*Auto-consolidated at {iso_date}*\n\n"
     try:
         old = MEMORY_FILE.read_text(encoding="utf-8")
-        # Keep only the last 3 consolidations (prune old ones)
         sections = old.split("*Auto-consolidated at")
         if len(sections) > 4:
             old = "*Auto-consolidated at".join(sections[-3:])
     except FileNotFoundError:
         old = ""
-
     updated = header + new_content + "\n\n---\n\n" + old
     MEMORY_FILE.write_text(updated, encoding="utf-8")
 

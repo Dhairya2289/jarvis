@@ -15,7 +15,7 @@ import asyncio
 import json
 import base64
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Callable, List, Optional
 
 from jarvis_v3.config import MAX_TOKENS, LOG_FILE, FALLBACK_MODEL, DEBATE_TRIGGER_WORDS
@@ -92,7 +92,7 @@ def _log_task(
     swap_count: int = 0,
 ):
     record = {
-        "ts": datetime.utcnow().isoformat(),
+        "ts": datetime.now(timezone.utc).isoformat(),
         "task": task,
         "task_type": task_type,
         "result_preview": result[:500],
@@ -149,6 +149,15 @@ async def run_agent(
         duration = time.time() - start
         _log_task(task, local_result, ["fast_path"], "local-router", duration, True)
         return local_result
+
+    # ── Context Engine Intent Classification (optional, read-only) ─
+    try:
+        from jarvis_v3.context_engine import classify_intent, route
+        intent = classify_intent(task)
+        specialist = route(intent)
+        _status(f"🔎 Intent → {specialist} (confidence={intent.confidence:.2f})")
+    except Exception:
+        pass
 
     task_type = classify_task(task)
     tools_used: List[str] = []

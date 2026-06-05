@@ -246,6 +246,93 @@ TOOL_DEFINITIONS: List[dict] = [
             "required": ["session_id"],
         },
     },
+    {
+        "name": "obsidian_create",
+        "description": "Create a note in the JARVIS Obsidian brain.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "content": {"type": "string"},
+                "folder": {"type": "string", "default": "general"},
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["name", "content"],
+        },
+    },
+    {
+        "name": "obsidian_read",
+        "description": "Read a note from the JARVIS Obsidian brain.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "folder": {"type": "string", "default": "general"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "obsidian_search",
+        "description": "Search notes in the JARVIS Obsidian brain.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "folder": {"type": "string"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "obsidian_daily",
+        "description": "Get or create today's daily note in Obsidian.",
+        "input_schema": {"type": "object", "properties": {"text": {"type": "string"}}},
+    },
+    {
+        "name": "skill_run",
+        "description": "Run a dynamically discovered skill by name.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "args": {"type": "object"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "skill_list",
+        "description": "List all available skills.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "memdir_add",
+        "description": "Add a memory entry to the typed memory directory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "content": {"type": "string"},
+                "mem_type": {"type": "string", "enum": ["fact", "preference", "error", "task", "insight"]},
+                "confidence": {"type": "number", "default": 0.8},
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["content", "mem_type"],
+        },
+    },
+    {
+        "name": "memdir_search",
+        "description": "Search the typed memory directory.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "mem_type": {"type": "string"},
+                "limit": {"type": "integer", "default": 10},
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 
@@ -503,6 +590,88 @@ def _compress_context(session_id: str) -> str:
         return f"[COMPRESS ERROR] {exc}"
 
 
+def _obsidian_create(name: str, content: str, folder: str = "general", tags: list | None = None) -> str:
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        path = ObsidianBrain().create_note(name, content, folder=folder, tags=tags or [])
+        return f"[OBSIDIAN] Created: {path}"
+    except Exception as exc:
+        return f"[OBSIDIAN ERROR] {exc}"
+
+
+def _obsidian_read(name: str, folder: str = "general") -> str:
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        note = ObsidianBrain().read_note(name, folder=folder)
+        return note["content"]
+    except Exception as exc:
+        return f"[OBSIDIAN ERROR] {exc}"
+
+
+def _obsidian_search(query: str, folder: str | None = None) -> str:
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        results = ObsidianBrain().search(query, folder=folder)
+        if not results:
+            return "No notes found."
+        return "\n".join(f"- {r['name']} ({r['folder']}): {r['content'][:100]}..." for r in results[:10])
+    except Exception as exc:
+        return f"[OBSIDIAN ERROR] {exc}"
+
+
+def _obsidian_daily(text: str = "") -> str:
+    try:
+        from jarvis_v3.obsidian_brain import ObsidianBrain
+        brain = ObsidianBrain()
+        path = brain.get_daily_note()
+        if text:
+            brain.append_daily(text)
+        return f"[OBSIDIAN] Daily note: {path}"
+    except Exception as exc:
+        return f"[OBSIDIAN ERROR] {exc}"
+
+
+def _skill_run(name: str, args: dict | None = None) -> str:
+    try:
+        from jarvis_v3.skill_system import SkillRegistry
+        registry = SkillRegistry()
+        registry.discover()
+        result = registry.run(name, **(args or {}))
+        return str(result)
+    except Exception as exc:
+        return f"[SKILL ERROR] {exc}"
+
+
+def _skill_list() -> str:
+    try:
+        from jarvis_v3.skill_system import SkillRegistry
+        registry = SkillRegistry()
+        registry.discover()
+        return registry.list_skills()
+    except Exception as exc:
+        return f"[SKILL ERROR] {exc}"
+
+
+def _memdir_add(content: str, mem_type: str, confidence: float = 0.8, tags: list | None = None) -> str:
+    try:
+        from jarvis_v3.memdir import MemDir
+        mid = MemDir().add(content, mem_type, confidence=confidence, tags=tags or [])
+        return f"[MEMDIR] Added: {mid}"
+    except Exception as exc:
+        return f"[MEMDIR ERROR] {exc}"
+
+
+def _memdir_search(query: str, mem_type: str | None = None, limit: int = 10) -> str:
+    try:
+        from jarvis_v3.memdir import MemDir
+        results = MemDir().search(query, mem_type=mem_type, limit=limit)
+        if not results:
+            return "No memories found."
+        return "\n".join(f"- [{r.mem_type}] {r.content[:80]}... (confidence={r.confidence:.2f})" for r in results)
+    except Exception as exc:
+        return f"[MEMDIR ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -524,4 +693,12 @@ _DISPATCH_MAP = {
     "cron_remove": _cron_remove,
     "dream_consolidate": _dream_consolidate,
     "compress_context": _compress_context,
+    "obsidian_create": _obsidian_create,
+    "obsidian_read": _obsidian_read,
+    "obsidian_search": _obsidian_search,
+    "obsidian_daily": _obsidian_daily,
+    "skill_run": _skill_run,
+    "skill_list": _skill_list,
+    "memdir_add": _memdir_add,
+    "memdir_search": _memdir_search,
 }
