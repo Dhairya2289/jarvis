@@ -386,6 +386,26 @@ TOOL_DEFINITIONS: List[dict] = [
         "description": "Get the MCP server URL and status for phone pairing.",
         "input_schema": {"type": "object", "properties": {}},
     },
+    {
+        "name": "proactive_start",
+        "description": "Start the proactive agent loop (system monitor daemon).",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "proactive_stop",
+        "description": "Stop the proactive agent loop.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "autoskill_review",
+        "description": "Review detected tool-usage patterns and auto-skills.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "autoskill_prune",
+        "description": "Clean old tool-usage patterns from auto-skill detector.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
 ]
 
 
@@ -784,6 +804,44 @@ def _mcp_status() -> str:
         return f"[MCP ERROR] {exc}"
 
 
+def _proactive_start() -> str:
+    try:
+        from jarvis.proactive_loop import ProactiveLoop
+        loop = ProactiveLoop()
+        loop.start()
+        return "[PROACTIVE] Loop started (checks every 60s)"
+    except Exception as exc:
+        return f"[PROACTIVE ERROR] {exc}"
+
+
+def _proactive_stop() -> str:
+    try:
+        from jarvis.proactive_loop import ProactiveLoop
+        # Singleton-ish: create new and stop immediately
+        loop = ProactiveLoop()
+        loop.stop()
+        return "[PROACTIVE] Loop stopped"
+    except Exception as exc:
+        return f"[PROACTIVE ERROR] {exc}"
+
+
+def _autoskill_review() -> str:
+    try:
+        from jarvis.auto_skills import AutoSkillDetector
+        return AutoSkillDetector().review()
+    except Exception as exc:
+        return f"[AUTOSKILL ERROR] {exc}"
+
+
+def _autoskill_prune() -> str:
+    try:
+        from jarvis.auto_skills import AutoSkillDetector
+        removed = AutoSkillDetector().prune()
+        return f"[AUTOSKILL] Pruned {removed} old patterns"
+    except Exception as exc:
+        return f"[AUTOSKILL ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -819,4 +877,8 @@ _DISPATCH_MAP = {
     "focus_app": _focus_app,
     "mcp_start": _mcp_start,
     "mcp_status": _mcp_status,
+    "proactive_start": _proactive_start,
+    "proactive_stop": _proactive_stop,
+    "autoskill_review": _autoskill_review,
+    "autoskill_prune": _autoskill_prune,
 }
