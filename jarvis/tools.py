@@ -333,6 +333,59 @@ TOOL_DEFINITIONS: List[dict] = [
             "required": ["query"],
         },
     },
+    {
+        "name": "list_apps",
+        "description": "List all installed desktop applications.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "search_apps",
+        "description": "Search installed apps by name, category, or keyword.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "launch_app",
+        "description": "Launch a desktop application by its display name.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "focus_app",
+        "description": "Focus an existing application window via Hyprland.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+            },
+            "required": ["name"],
+        },
+    },
+    {
+        "name": "mcp_start",
+        "description": "Start the JARVIS MCP server so your phone can connect.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "port": {"type": "integer", "default": 8765},
+            },
+        },
+    },
+    {
+        "name": "mcp_status",
+        "description": "Get the MCP server URL and status for phone pairing.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
 ]
 
 
@@ -672,6 +725,65 @@ def _memdir_search(query: str, mem_type: str | None = None, limit: int = 10) -> 
         return f"[MEMDIR ERROR] {exc}"
 
 
+def _list_apps() -> str:
+    try:
+        from jarvis.apps.desktop import list_apps
+        apps = list_apps()
+        return "\n".join(f"- {a.name}" for a in apps[:50])
+    except Exception as exc:
+        return f"[DESKTOP ERROR] {exc}"
+
+
+def _search_apps(query: str) -> str:
+    try:
+        from jarvis.apps.desktop import search_apps
+        results = search_apps(query)
+        if not results:
+            return f"No apps matching '{query}'."
+        return "\n".join(f"- {a.name}: {a.exec}" for a in results[:20])
+    except Exception as exc:
+        return f"[DESKTOP ERROR] {exc}"
+
+
+def _launch_app(name: str) -> str:
+    try:
+        from jarvis.apps.desktop import launch_app
+        return launch_app(name)
+    except Exception as exc:
+        return f"[DESKTOP ERROR] {exc}"
+
+
+def _focus_app(name: str) -> str:
+    try:
+        from jarvis.apps.desktop import focus_app
+        return focus_app(name)
+    except Exception as exc:
+        return f"[DESKTOP ERROR] {exc}"
+
+
+def _mcp_start(port: int = 8765) -> str:
+    try:
+        import threading
+        from jarvis.mcp_server import start_server
+        def _run():
+            start_server(port=port)
+        t = threading.Thread(target=_run, daemon=True)
+        t.start()
+        from jarvis.mcp_server import get_lan_ip
+        return f"[MCP] Server starting on http://{get_lan_ip()}:{port}/sse in background thread."
+    except Exception as exc:
+        return f"[MCP ERROR] {exc}"
+
+
+def _mcp_status() -> str:
+    try:
+        from jarvis.mcp_server import get_lan_ip
+        url = f"http://{get_lan_ip()}:8765/sse"
+        return f"[MCP] Server URL: {url}\nAdd this URL to Edge Gallery → MCP → Add Server"
+    except Exception as exc:
+        return f"[MCP ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -701,4 +813,10 @@ _DISPATCH_MAP = {
     "skill_list": _skill_list,
     "memdir_add": _memdir_add,
     "memdir_search": _memdir_search,
+    "list_apps": _list_apps,
+    "search_apps": _search_apps,
+    "launch_app": _launch_app,
+    "focus_app": _focus_app,
+    "mcp_start": _mcp_start,
+    "mcp_status": _mcp_status,
 }

@@ -156,45 +156,54 @@ for _d in [BASE_DIR, SANDBOX_DIR, PLANS_DIR, CHROMA_DIR, NOTES_DIR]:
     _d.mkdir(parents=True, exist_ok=True)
 
 # ── Models — Swarm Tiers ──────────────────────────────────
-BRAIN_MODEL = "openrouter:deepseek/deepseek-r1:free"
+# CREDITS-FREE MODE: everything defaults to local ollama.
+# Set USE_PAID_PROVIDERS=1 in ~/.jarvis/.env to re-enable cloud APIs.
+USE_PAID_PROVIDERS = os.environ.get("USE_PAID_PROVIDERS", "0") == "1"
+
+BRAIN_MODEL = "ollama:qwen2.5:3b"
 
 MODELS = {
     "speed": [
+        "ollama:qwen2.5:3b",
         "groq:llama-3.1-8b-instant",
         "cerebras:llama3.1-8b",
-        "ollama:qwen2.5:3b",
     ],
     "logic": [
+        "ollama:qwen2.5:3b",
         "openrouter:deepseek/deepseek-r1:free",
         "sambanova:Meta-Llama-3.1-405B-Instruct",
         "groq:llama-3.3-70b-versatile",
         "fcc:claude-3-5-sonnet-20241022",
     ],
     "code": [
+        "ollama:qwen2.5:3b",
         "groq:llama-3.3-70b-versatile",
         "github:gpt-4o",
         "fcc:claude-3-5-sonnet-20241022",
         "openrouter:deepseek/deepseek-v3:free",
     ],
     "vision": [
+        "ollama:llava-phi3",
         "gemini:gemini-2.0-flash",
         "github:gpt-4o",
         "fcc:claude-3-5-sonnet-20241022",
     ],
     "research": [
+        "ollama:qwen2.5:3b",
         "gemini:gemini-2.5-pro",
         "openrouter:deepseek/deepseek-r1:free",
         "sambanova:Meta-Llama-3.3-70B-Instruct",
     ],
     "debate": [
+        "ollama:qwen2.5:3b",
         "openrouter:deepseek/deepseek-r1:free",
         "groq:llama-3.3-70b-versatile",
         "sambanova:Meta-Llama-3.1-405B-Instruct",
     ],
 }
 
-FALLBACK_MODEL = "ollama:phi4-mini"
-DEFAULT_MODEL = "claude-sonnet-4-5"
+FALLBACK_MODEL = "ollama:qwen2.5:3b"
+DEFAULT_MODEL = "ollama:qwen2.5:3b"
 MAX_TOKENS = 8096
 
 # ── Timeouts ──────────────────────────────────────────────
