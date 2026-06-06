@@ -7,7 +7,7 @@ import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 
 from jarvis.config import BASE_DIR
@@ -333,8 +333,9 @@ async def action(body: dict):
 # ── Chat (streaming via Ollama) ───────────────────────────
 
 @router.post("/chat")
-async def chat(body: dict):
+async def chat(request: Request):
     """Stream chat completions from the local JARVIS model."""
+    body = await request.json()
     messages = body.get("messages", [])
     model = body.get("model", "jarvis-custom-v2")
 
