@@ -14,7 +14,7 @@ from jarvis.config import BASE_DIR
 # ── FastAPI guard (user may not have installed deps yet) ──
 try:
     from fastapi import FastAPI, Request
-    from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+    from fastapi.responses import JSONResponse, StreamingResponse, FileResponse, RedirectResponse
     from fastapi.middleware.cors import CORSMiddleware
     FASTAPI_AVAILABLE = True
 except ImportError:
@@ -26,6 +26,13 @@ try:
     PSUTIL_AVAILABLE = True
 except ImportError:
     PSUTIL_AVAILABLE = False
+
+# ── Static files guard ───────────────────────────────────────────────────────
+try:
+    from fastapi.staticfiles import StaticFiles
+    STATICFILES_AVAILABLE = True
+except ImportError:
+    STATICFILES_AVAILABLE = False
 
 
 def get_agent_states() -> list:
@@ -95,7 +102,7 @@ def get_system_stats() -> dict:
     }
 
 
-# ── Build FastAPI app ─────────────────────────────────────
+# ── Build FastAPI app ────────────────────────────────────────────────────────
 
 if FASTAPI_AVAILABLE:
     app = FastAPI(title="JARVIS HUD", version="3.0")
@@ -109,7 +116,30 @@ else:
     app = None  # type: ignore
 
 
+# ── Import and include GUI routes ────────────────────────────────────────────
 if FASTAPI_AVAILABLE and app is not None:
+    try:
+        from jarvis.gui.routes import router as gui_router
+        app.include_router(gui_router, prefix="/api")
+    except Exception as e:
+        # Routes unavailable — GUI will show errors on endpoints
+        import logging
+        logging.getLogger(__name__).warning("Could not load GUI routes: %s", e)
+
+
+# ── Mount static files ────────────────────────────────────────────────────────
+if FASTAPI_AVAILABLE and app is not None and STATICFILES_AVAILABLE:
+    _static_dir = Path(__file__).parent / "static"
+    if _static_dir.exists():
+        app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+
+if FASTAPI_AVAILABLE and app is not None:
+    @app.get("/")
+    async def root():
+        """Redirect root to the static dashboard."""
+        return RedirectResponse(url="/static/dashboard.html")
+
     @app.get("/api/health")
     async def health():
         return JSONResponse({"ok": True, "pid": os.getpid(), "version": "3.0"})
@@ -134,13 +164,6 @@ if FASTAPI_AVAILABLE and app is not None:
             return JSONResponse({"ok": True, "result": result})
         except Exception as e:
             return JSONResponse({"ok": False, "error": str(e)})
-
-    @app.get("/")
-    async def root():
-        hud_path = Path(__file__).parent.parent.parent / "static" / "hud.html"
-        if hud_path.exists():
-            return FileResponse(str(hud_path))
-        return JSONResponse({"msg": "JARVIS HUD backend running. Open /static/hud.html"})
 
     @app.get("/api/stream")
     async def stream():

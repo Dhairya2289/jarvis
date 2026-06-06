@@ -241,6 +241,7 @@ def main():
     parser.add_argument("--plan", metavar="GOAL", help="Create long-horizon plan")
     parser.add_argument("--morning", action="store_true", help="Morning briefing")
     parser.add_argument("--hud", action="store_true", help="Launch HUD server")
+    parser.add_argument("--dashboard", action="store_true", help="Launch the JARVIS web dashboard")
     parser.add_argument("--vision", action="store_true", help="Capture screen and ask vision model")
     parser.add_argument("--workflow", nargs="*", help="Workflow subcommand")
     parser.add_argument("--loop", action="store_true", help="Start the unified JARVIS agent loop")
@@ -271,6 +272,10 @@ def main():
             run_server()
         except Exception as e:
             print(f"HUD error: {e}")
+        return
+
+    if args.dashboard:
+        _launch_dashboard()
         return
 
     if args.vision:
@@ -523,6 +528,49 @@ def main():
 
     # Default: interactive
     _run_sync(interactive_loop())
+
+
+def _launch_dashboard() -> None:
+    """Start the FastAPI server and open the dashboard in a browser/webview."""
+    import threading
+    import time
+    import urllib.request
+    from jarvis.gui_server import app as gui_app
+    import uvicorn
+
+    def _run_server():
+        uvicorn.run(gui_app, host="127.0.0.1", port=5050, log_level="warning")
+
+    server_thread = threading.Thread(target=_run_server, daemon=True)
+    server_thread.start()
+
+    # Wait for server to be ready
+    for _ in range(20):
+        try:
+            urllib.request.urlopen("http://127.0.0.1:5050/api/health", timeout=1)
+            break
+        except Exception:
+            time.sleep(0.5)
+
+    # Try webview first, fall back to browser
+    try:
+        from jarvis.launch_gui import launch_gui
+        launch_gui()
+    except SystemExit:
+        # pywebview not installed — fallback to browser
+        import webbrowser
+        webbrowser.open("http://127.0.0.1:5050/static/dashboard.html")
+        if RICH_AVAILABLE:
+            console.print("[bold cyan]JARVIS Dashboard running at http://127.0.0.1:5050[/bold cyan]")
+            console.print("[dim]Press Ctrl+C to stop[/dim]")
+        else:
+            print("JARVIS Dashboard running at http://127.0.0.1:5050")
+            print("Press Ctrl+C to stop")
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
 
 if __name__ == "__main__":

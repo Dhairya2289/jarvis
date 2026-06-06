@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JARVIS Dashboard</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      background: #020c18;
+      color: #e0e0e0;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid #1a2d4a;
+    }
+    header h1 { margin: 0; color: #00d4ff; font-size: 1.5rem; }
+    #status { color: #00ff88; font-size: 0.9rem; }
+    #status.disconnected { color: #ff4444; }
+    #grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      padding: 1rem;
+    }
+    @media (max-width: 1200px) {
+      #grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      #grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: #0a1628;
+      border: 1px solid #1a2d4a;
+      border-radius: 8px;
+      padding: 1rem;
+      min-height: 150px;
+    }
+    .card h3 { color: #00d4ff; margin-top: 0; font-size: 1.1rem; margin-bottom: 0.75rem; }
+    .content { font-size: 0.9rem; line-height: 1.5; }
+    .content p { margin: 0.25rem 0; }
+    .content ul { margin: 0.5rem 0; padding-left: 1.25rem; }
+    .btn {
+      background: #00d4ff;
+      color: #020c18;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 0.25rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .btn:hover { background: #33e0ff; }
+    .btn:active { transform: scale(0.98); }
+    .error { color: #ff4444; }
+    .spinner {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #1a2d4a;
+      border-top-color: #00d4ff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .stat-label { color: #888; }
+    .stat-value { color: #00d4ff; font-weight: 500; }
+    .priority-high { color: #ff6644; }
+    .priority-medium { color: #ffaa44; }
+    .priority-low { color: #44ff88; }
+    .timestamp { color: #666; font-size: 0.8rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧠 JARVIS Dashboard</h1>
+    <span id="status">● Connected</span>
+  </header>
+  <main id="grid">
+    <div class="card" id="panel-health">
+      <h3>🖥️ System</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-model">
+      <h3>🤖 Model</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-desktop">
+      <h3>🖥️ Desktop</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-actions">
+      <h3>⚡ Actions</h3>
+      <div class="content">
+        <button class="btn" onclick="act('snapshot')">🖥️ Snapshot</button>
+        <button class="btn" onclick="act('organize_downloads')">📥 Organize</button>
+        <button class="btn" onclick="act('index_files')">🔍 Index</button>
+        <button class="btn" onclick="act('archive_screenshots')">📸 Archive</button>
+        <button class="btn" onclick="act('health_report')">📊 Health</button>
+        <button class="btn" onclick="act('memory_consolidate')">🧠 Mem Consolidate</button>
+      </div>
+    </div>
+    <div class="card" id="panel-tasks">
+      <h3>📝 Tasks</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-rss">
+      <h3>📰 RSS</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-clipboard">
+      <h3>📋 Clipboard</h3>
+      <div class="content">Loading...</div>
+    </div>
+    <div class="card" id="panel-notifications">
+      <h3>🔔 Notifications</h3>
+      <div class="content">Loading...</div>
+    </div>
+  </main>
+
+  <script>
+    const API = 'http://127.0.0.1:5050/api';
+
+    async function fetchJson(path) {
+      const res = await fetch(API + path);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    }
+
+    async function updatePanel(id, path, renderFn) {
+      const el = document.querySelector(`#${id} .content`);
+      el.innerHTML = '<span class="spinner"></span>';
+      try {
+        const data = await fetchJson(path);
+        el.innerHTML = renderFn(data);
+      } catch (e) {
+        el.innerHTML = '<p class="error">Unavailable</p>';
+        document.getElementById('status').textContent = '● Disconnected';
+        document.getElementById('status').classList.add('disconnected');
+      }
+    }
+
+    function updateHealth(data) {
+      return `
+        <p><span class="stat-label">CPU:</span> <span class="stat-value">${data.cpu || 'N/A'}%</span></p>
+        <p><span class="stat-label">Memory:</span> <span class="stat-value">${data.memory || 'N/A'}%</span></p>
+        <p><span class="stat-label">Disk:</span> <span class="stat-value">${data.disk || 'N/A'}%</span></p>
+        <p class="timestamp">Updated: ${new Date().toLocaleTimeString()}</p>
+      `;
+    }
+
+    function updateModel(data) {
+      return `
+        <p><span class="stat-label">Model:</span> <span class="stat-value">${data.name || 'N/A'}</span></p>
+        <p><span class="stat-label">Status:</span> <span class="stat-value">${data.status || 'Unknown'}</span></p>
+        <p><span class="stat-label">Last Trained:</span> <span class="timestamp">${data.last_trained || 'Never'}</span></p>
+      `;
+    }
+
+    function updateDesktop(data) {
+      const workspaces = (data.workspaces || []).map(w => `<li>Workspace ${w.id}: ${w.name || 'Unnamed'}</li>`).join('');
+      return `
+        <p><span class="stat-label">Active Window:</span> ${data.active_window || 'None'}</p>
+        <p><span class="stat-label">Workspaces:</span></p>
+        <ul>${workspaces || '<li>None</li>'}</ul>
+      `;
+    }
+
+    function updateTasks(data) {
+      const tasks = (data.tasks || []).map(t => {
+        const priorityClass = t.priority === 'high' ? 'priority-high' : t.priority === 'medium' ? 'priority-medium' : 'priority-low';
+        return `<li class="${priorityClass}">[${t.priority}] ${t.title || t.name || 'Untitled'} - ${t.status || 'pending'}</li>`;
+      }).join('');
+      return `<ul>${tasks || '<li>No tasks</li>'}</ul>`;
+    }
+
+    function updateRss(data) {
+      const entries = (data.entries || data.feed || []).slice(0, 5).map(e => {
+        return `<li><a href="${e.link || '#'}" style="color:#00d4ff">${e.title || 'Untitled'}</a> <span class="timestamp">${e.date || ''}</span></li>`;
+      }).join('');
+      return `<ul>${entries || '<li>No entries</li>'}</ul>`;
+    }
+
+    function updateClipboard(data) {
+      const clips = (data.clips || data.history || []).slice(0, 5).map(c => {
+        const text = (c.text || c.content || '').substring(0, 50);
+        return `<li title="${c.text || c.content || ''}">${text}${text.length >= 50 ? '...' : ''}</li>`;
+      }).join('');
+      return `<ul>${clips || '<li>No clips</li>'}</ul>`;
+    }
+
+    function updateNotifications(data) {
+      const alerts = (data.alerts || data.notifications || []).slice(0, 5).map(a => {
+        return `<li>${a.message || a.text || JSON.stringify(a)}</li>`;
+      }).join('');
+      return `<ul>${alerts || '<li>No notifications</li>'}</ul>`;
+    }
+
+    async function act(action) {
+      try {
+        const res = await fetch(API + '/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        alert(`Action: ${action}\nResult: ${JSON.stringify(data)}`);
+      } catch (e) {
+        alert(`Action failed: ${e.message}`);
+      }
+    }
+
+    function refreshAll() {
+      updatePanel('panel-health', '/health', updateHealth);
+      updatePanel('panel-model', '/model', updateModel);
+      updatePanel('panel-desktop', '/desktop', updateDesktop);
+      updatePanel('panel-tasks', '/tasks', updateTasks);
+      updatePanel('panel-rss', '/rss', updateRss);
+      updatePanel('panel-clipboard', '/clipboard', updateClipboard);
+      updatePanel('panel-notifications', '/notifications', updateNotifications);
+    }
+
+    // Initial load and auto-refresh
+    refreshAll();
+    setInterval(refreshAll, 5000);
+  </script>
+</body>
+</html>
