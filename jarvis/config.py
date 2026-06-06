@@ -16,6 +16,9 @@ _ENV = Path.home() / ".jarvis" / ".env"
 if _ENV.exists():
     load_dotenv(_ENV)
 
+# ── Key rotation state ────────────────────────────────────
+_CASTAI_KEY_INDEX: int = 0
+
 
 # ── Provider Config ───────────────────────────────────────
 
@@ -36,7 +39,18 @@ class Provider:
 
     @property
     def api_key(self) -> str:
-        return os.environ.get(self.api_key_env, "")
+        global _CASTAI_KEY_INDEX
+        val = os.environ.get(self.api_key_env, "")
+        if self.name == "castai":
+            keys = [
+                k for i in range(1, 7)
+                if (k := os.environ.get(f"CASTAI_API_KEY_{i}"))
+            ]
+            if keys:
+                idx = _CASTAI_KEY_INDEX % len(keys)
+                _CASTAI_KEY_INDEX = (_CASTAI_KEY_INDEX + 1) % len(keys)
+                return keys[idx]
+        return val
 
     @property
     def is_configured(self) -> bool:
@@ -174,6 +188,16 @@ PROVIDERS: List[Provider] = [
         rpm_limit=20,
         rpd_limit=500,
         best_for=["logic", "research", "debate"],
+        health_endpoint=None,
+    ),
+    Provider(
+        name="castai",
+        base_url=os.environ.get("CASTAI_BASE_URL", "https://llm.cast.ai/openai/v1"),
+        api_key_env="CASTAI_API_KEY_1",
+        models=["minimax-m2.7", "auto"],
+        rpm_limit=60,
+        rpd_limit=3000,
+        best_for=["logic", "code", "speed", "vision", "research", "debate"],
         health_endpoint=None,
     ),
     Provider(

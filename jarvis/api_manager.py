@@ -539,6 +539,7 @@ class ApiManager:
             "openrouter",
             "github",
             "fcc",
+            "castai",
         )
 
         if is_openai:
