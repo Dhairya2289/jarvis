@@ -9,6 +9,7 @@ import json
 import logging
 import subprocess
 from pathlib import Path
+from typing import Any
 
 from jarvis.api_manager import call_with_rotation
 from jarvis.config import FCC_AUTH_TOKEN, FCC_BASE_URL
@@ -117,4 +118,23 @@ def execute_vision_click(element_desc: str) -> str:
     return execute_human_input("click", f"{px} {py}")
 
 
-__all__ = ["get_element_coordinates", "execute_vision_click"]
+def click_element(element_desc: str) -> str:
+    """Natural language → screenshot → coordinates → ydotool click."""
+    screenshot_path = "/tmp/jarvis_screen.png"
+    subprocess.run(["grim", screenshot_path], check=True, timeout=5)
+
+    coords = get_element_coordinates(element_desc, screenshot_path)
+    if "error" in coords:
+        return f"[ERROR] Could not find: {element_desc}"
+
+    width, height = _res_from_hyprctl()
+    x = int(coords["x"] * width / 100)
+    y = int(coords["y"] * height / 100)
+
+    subprocess.run(["ydotool", "mousemove", "--absolute", str(x), str(y)], check=True, timeout=3)
+    subprocess.run(["ydotool", "click", "0xC0"], check=True, timeout=3)
+
+    return f"Clicked '{element_desc}' at ({x}, {y})"
+
+
+__all__ = ["get_element_coordinates", "execute_vision_click", "click_element"]

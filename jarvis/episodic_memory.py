@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import time
@@ -35,6 +36,8 @@ def _get_collection() -> Optional[Any]:
 def store_successful_task(intent: str, actions: List[Any]) -> str:
     """Save a successful (intent, actions) pair to vector DB.
 
+    Deduplicates by hashing the intent text before storing.
+
     Args:
         intent: The task intent or goal.
         actions: List of actions taken to achieve the intent.
@@ -48,13 +51,21 @@ def store_successful_task(intent: str, actions: List[Any]) -> str:
         _LOG.warning(msg)
         return msg
     try:
-        doc_id = str(uuid.uuid4())          # Fixed: was os.times().elapsed
+        # Deduplication: hash the intent and skip if already stored
+        intent_hash = hashlib.md5(intent.encode()).hexdigest()[:8]
+        existing = col.get(where={"hash": intent_hash}) if hasattr(col, 'get') else None
+        if existing and existing.get("ids"):
+            _LOG.debug("Skipping duplicate episode (hash=%s): %s", intent_hash, intent[:50])
+            return f"[MEMORY] Duplicate skipped (hash={intent_hash})"
+
+        doc_id = str(uuid.uuid4())
         doc    = f"Intent: {intent}\nActions: {json.dumps(actions)}"
         col.add(
             ids=[doc_id],
             documents=[doc],
             metadatas=[{
                 "intent":    intent[:200],
+                "hash":      intent_hash,
                 "timestamp": int(time.time()),
                 "actions":   json.dumps(actions),
             }]

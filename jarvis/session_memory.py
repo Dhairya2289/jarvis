@@ -11,6 +11,7 @@ LOG = logging.getLogger(__name__)
 BASE_DIR = Path.home() / ".jarvis"
 SESSION_FILE = BASE_DIR / "sessions.json"
 MAX_HISTORY = 20
+MAX_TURNS = 20  # last N turns returned to prevent context overflow
 
 # Memory structure: { session_id: deque([ {"role": "user", "content": "..."}, ... ]) }
 _sessions: Dict[str, Deque[Dict[str, str]]] = {}
@@ -53,9 +54,11 @@ def get_session_context(session_id: str) -> List[Dict[str, str]]:
     if session_id not in _sessions:
         LOG.debug("Session ID not found: %s", session_id)
         return []
-    context = list(_sessions[session_id])
-    LOG.debug("Retrieved context for session %s (%d turns)", session_id, len(context))
-    return context
+    history = list(_sessions[session_id])
+    # Apply sliding window cap to prevent context overflow
+    capped = history[-MAX_TURNS:] if len(history) > MAX_TURNS else history
+    LOG.debug("Retrieved context for session %s (%d turns, capped from %d)", session_id, len(capped), len(history))
+    return capped
 
 
 def add_session_turn(session_id: str, role: str, content: str) -> None:

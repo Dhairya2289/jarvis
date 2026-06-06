@@ -607,6 +607,10 @@ class ApiManager:
         max_tokens: int,
     ) -> MockResponse:
 
+        # Strip tools for providers that don't support function calling
+        if not provider.supports_tools:
+            tools = None
+
         openai_msgs = self._normalize_messages(messages)
         api_key = provider.api_key or "ollama"
         is_openai = provider.name in (

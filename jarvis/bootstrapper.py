@@ -47,6 +47,15 @@ def load_user_skills() -> int:
 
 def bootstrap():
     _log.info("JARVIS Bootstrap v2 — Initializing knowledge base...")
+
+    # Load user skills at startup
+    try:
+        n = load_user_skills()
+        if n:
+            _log.info("Loaded %d user skills", n)
+    except Exception as e:
+        _log.error("[SKILLS] Startup load failed: %s", e)
+
     k = load_knowledge()
 
     # ── App Coordinates ────────────────────────────────────

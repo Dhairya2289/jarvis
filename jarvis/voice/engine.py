@@ -84,7 +84,19 @@ def run_voice_mode() -> None:
             time.sleep(2)
             return
 
-        # 6. Notify what was said
+        # 6. Drag-to-explain: capture region and run vision agent
+        transcript_lower = text.lower()
+        if "what is this" in transcript_lower or "explain this" in transcript_lower:
+            try:
+                from jarvis.screen_region import capture_full
+                from jarvis.agent import run_agent
+                import asyncio
+                img = capture_full()
+                asyncio.run(run_agent(f"Explain what you see in this screenshot: {img}"))
+            except Exception:
+                pass  # Non-blocking; still process normally
+
+        # 7. Notify what was said
         notify(f'💬 You said: "{text}"', "", transient=True)
 
         # 7. Thinking

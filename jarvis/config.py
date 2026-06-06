@@ -35,6 +35,7 @@ class Provider:
     rpd_limit: int
     best_for: List[str]  # e.g. ["speed", "code"]
     health_endpoint: Optional[str] = None
+    supports_tools: bool = True  # NEW — set False for providers without function-calling support
     # health_endpoint is a cheap URL we can probe to check liveness
     # (e.g. groq doesn't have one, so we use a tiny chat completion)
 
@@ -230,6 +231,7 @@ PROVIDERS: List[Provider] = [
         rpd_limit=999999,
         best_for=["speed", "local"],
         health_endpoint="http://localhost:11434/api/tags",
+        supports_tools=False,  # Ollama doesn't support function calling
     ),
 ]
 
