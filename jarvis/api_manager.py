@@ -14,6 +14,7 @@ Redesign from V2 with:
 import asyncio
 import hashlib
 import json
+import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
@@ -21,6 +22,8 @@ from pathlib import Path
 from typing import Any, AsyncGenerator, Callable, Dict, List, Optional, Set
 
 import httpx
+
+logger = logging.getLogger("jarvis.api_manager")
 
 from jarvis.config import PROVIDER_MAP, Provider
 
@@ -281,10 +284,13 @@ class ApiManager:
             return True  # No endpoint, assume OK
         try:
             client = self._client_sync()
-            headers = {}
+            headers = {"User-Agent": "JARVIS/3.0"}
             if provider.api_key:
                 headers["Authorization"] = f"Bearer {provider.api_key}"
             r = await client.get(provider.health_endpoint, headers=headers, timeout=5.0)
+            # 429 means the endpoint is up but rate-limited — count as healthy
+            if r.status_code == 429:
+                return True
             return r.status_code < 500
         except Exception:
             return False
@@ -430,6 +436,58 @@ class ApiManager:
                 out.append(m)
         return out
 
+    # ---- Retry helper ----
+
+    RETRYABLE_STATUS_CODES = {429, 503, 504}
+    NO_RETRY_STATUS_CODES = {401, 403}
+
+    async def _request_with_retry(
+        self,
+        coro,
+        provider_name: str,
+        operation: str = "request",
+    ) -> httpx.Response:
+        """Execute an HTTP coroutine with exponential-backoff retry.
+
+        Retries up to 3 times on 429, 503, 504.
+        Does NOT retry on 401 or 403 (permanent auth failures).
+        Backoff: 1s, 2s, 4s.
+        """
+        delays = [1.0, 2.0, 4.0]
+        last_err: Optional[Exception] = None
+
+        for attempt in range(4):  # 0, 1, 2, 3 → up to 3 retries
+            try:
+                return await coro
+            except httpx.HTTPStatusError as exc:
+                status = exc.response.status_code
+                if status in self.NO_RETRY_STATUS_CODES:
+                    raise  # permanent — do not retry
+                if status in self.RETRYABLE_STATUS_CODES and attempt < 3:
+                    delay = delays[attempt]
+                    logger.warning(
+                        f"[{provider_name}] {operation} returned {status}, "
+                        f"retrying in {delay}s (attempt {attempt + 1}/3)"
+                    )
+                    await asyncio.sleep(delay)
+                    last_err = exc
+                    continue
+                raise  # non-retryable or out of retries
+            except httpx.TimeoutException as exc:
+                if attempt < 3:
+                    delay = delays[attempt]
+                    logger.warning(
+                        f"[{provider_name}] {operation} timed out, "
+                        f"retrying in {delay}s (attempt {attempt + 1}/3)"
+                    )
+                    await asyncio.sleep(delay)
+                    last_err = exc
+                    continue
+                raise
+
+        # Should not reach here, but satisfy type checker
+        raise last_err or Exception(f"{provider_name} {operation} failed after 3 retries")
+
     # ---- Core call ----
 
     async def call(
@@ -507,6 +565,28 @@ class ApiManager:
                     # Rate limited — mark as unavailable and try next
                     continue
                 if "404" in err or "not found" in err:
+                    # 404 fallback: if openrouter :free model, retry with suffix stripped
+                    if provider.name == "openrouter" and model.endswith(":free"):
+                        fallback_model = model[:-5]  # strip ":free"
+                        print(f"    [API] 404 on :free model, retrying with {fallback_model}")
+                        try:
+                            result = await self._call_provider(
+                                provider=provider,
+                                model=fallback_model,
+                                messages=messages,
+                                system=system,
+                                tools=tools,
+                                stream=stream,
+                                token_callback=token_callback,
+                                temperature=temperature,
+                                max_tokens=max_tokens,
+                            )
+                            await self.breaker.record_success(provider.name)
+                            await self.limiter.record_call(provider.name)
+                            return result
+                        except Exception as fallback_err:
+                            print(f"    [API] Fallback also failed: {fallback_err}")
+                            await self.breaker.record_failure(provider.name)
                     continue
                 if "authentication" in err or "auth" in err or "key" in err:
                     # Auth failure — skip this provider entirely for this call
@@ -544,7 +624,10 @@ class ApiManager:
 
         if is_openai:
             url = f"{provider.base_url}/chat/completions"
-            headers = {"Authorization": f"Bearer {api_key}"}
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "User-Agent": "JARVIS/3.0",
+            }
             payload: dict = {
                 "model": model,
                 "messages": (
@@ -565,11 +648,13 @@ class ApiManager:
 
             if stream:
                 return await self._stream_openai(
-                    client, url, headers, payload, model, token_callback
+                    client, url, headers, payload, model, token_callback,
+                    provider.name,
                 )
             else:
                 return await self._sync_openai(
-                    client, url, headers, payload, model
+                    client, url, headers, payload, model,
+                    provider.name,
                 )
         else:
             # Anthropic native
@@ -586,11 +671,16 @@ class ApiManager:
         payload: dict,
         model: str,
         token_callback: Optional[Callable[[str], None]],
+        provider_name: str = "unknown",
     ) -> MockResponse:
         full_text = ""
         tool_calls_raw: Dict[int, Dict[str, str]] = {}
-        async with client.stream(
-            "POST", url, headers=headers, json=payload
+
+        async def _stream_coro():
+            return await client.stream("POST", url, headers=headers, json=payload)
+
+        async with await self._request_with_retry(
+            _stream_coro(), provider_name, "stream"
         ) as r:
             r.raise_for_status()
             async for line in r.aiter_lines():
@@ -646,8 +736,12 @@ class ApiManager:
         headers: dict,
         payload: dict,
         model: str,
+        provider_name: str = "unknown",
     ) -> MockResponse:
-        r = await client.post(url, headers=headers, json=payload)
+        async def _post_coro():
+            return await client.post(url, headers=headers, json=payload)
+
+        r = await self._request_with_retry(_post_coro(), provider_name, "POST")
         r.raise_for_status()
         data = r.json()
         choice = data["choices"][0]["message"]
