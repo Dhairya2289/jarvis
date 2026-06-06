@@ -4,5 +4,8 @@ version = "0.1.0"
 description = "JARVIS AI OS — Unified V2+V3 codebase"
 readme = "README.md"
 requires-python = ">=3.11"
+dependencies = [
+    "python-jose[cryptography]",
+]
 [tool.pytest.ini_options]
 testpaths = ["v2/tests", "v3/tests"]

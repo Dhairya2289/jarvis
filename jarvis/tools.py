@@ -952,6 +952,18 @@ def _focus_app(name: str) -> str:
         return f"[DESKTOP ERROR] {exc}"
 
 
+def _focus_mode(duration: int = 25) -> str:
+    """Activate Pomodoro focus mode: close distractions, pause notifications."""
+    try:
+        import subprocess
+        subprocess.run(["hyprctl", "dispatch", "closewindow", "class:discord"], capture_output=True, timeout=3)
+        subprocess.run(["hyprctl", "dispatch", "closewindow", "class:telegram-desktop"], capture_output=True, timeout=3)
+        subprocess.run(["dunstctl", "set-paused", "true"], capture_output=True, timeout=3)
+        return f"🔴 Focus mode ON ({duration} min). Notifications paused, distractions closed."
+    except Exception as exc:
+        return f"[FOCUS ERROR] {exc}"
+
+
 def _mcp_start(port: int = 8765) -> str:
     try:
         import threading
@@ -1210,4 +1222,5 @@ _DISPATCH_MAP = {
     "window_timeline": _window_timeline,
     "screen_pointer": lambda args: __import__("jarvis.vision_agent", fromlist=["click_element"]).click_element(args.get("element", "")),
     "screen_explain": lambda args: __import__("asyncio").run(__import__("jarvis.vision_tool", fromlist=["capture_and_ask"]).capture_and_ask("Explain what you see in this screen region.")),
+    "focus_mode": _focus_mode,
 }

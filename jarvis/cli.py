@@ -260,8 +260,15 @@ def main():
     parser.add_argument("--clipboard-history", nargs="?", const="10", metavar="N", help="Get clipboard history (last N items)")
     parser.add_argument("--notifications", nargs="?", const="10", metavar="N", help="Get recent notifications (last N)")
     parser.add_argument("--archive-screenshots", action="store_true", help="Archive old screenshots")
+    parser.add_argument("--focus", action="store_true", help="Activate 25-minute focus mode (Pomodoro)")
     parser.add_argument("--window-timeline", nargs="?", const="24", metavar="HOURS", help="Get window activity timeline")
+    parser.add_argument("--create-token", metavar="DEVICE", help="Generate JWT for a device")
     args = parser.parse_args()
+
+    if args.create_token:
+        from jarvis.api_server import create_token
+        print(create_token(args.create_token))
+        return
 
     if args.doctor:
         doctor()
@@ -482,6 +489,18 @@ def main():
                     print(f"  {item}")
         except Exception as e:
             print(f"Notifications error: {e}")
+        return
+
+    if args.focus:
+        try:
+            from jarvis.tools import dispatch_tool
+            result = dispatch_tool("focus_mode", {})
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] {result}")  # type: ignore
+            else:
+                print(result)
+        except Exception as e:
+            print(f"Focus mode error: {e}")
         return
 
     if args.archive_screenshots:

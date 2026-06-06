@@ -14,7 +14,12 @@ from jarvis.config import BASE_DIR
 
 _log = logging.getLogger(__name__)
 
-__all__ = ["NotificationTriage", "NotificationEntry"]
+__all__ = [
+    "NotificationTriage",
+    "NotificationEntry",
+    "classify_notification",
+    "triage_notifications",
+]
 
 _MAKO_HISTORY_PATH = Path.home() / ".local" / "share" / "mako" / "history"
 
@@ -171,3 +176,37 @@ class NotificationTriage:
 
         _log.debug("D-Bus notifications available but history not implemented — using empty list")
         return []
+
+
+# ------------------------------------------------------------------ #
+# Smart triage
+# ------------------------------------------------------------------ #
+
+_URGENT_KEYWORDS = [
+    "meeting", "reminder", "alert", "failed", "error",
+    "mentioned you", "overdue",
+]
+
+_SUPPRESS_KEYWORDS = [
+    "promotion", "newsletter", "marketing", "ad", "sale", "unsubscribe",
+]
+
+
+def classify_notification(summary: str, body: str) -> str:
+    """Classify a notification as *show*, *suppress*, or *defer*."""
+    combined = (summary + " " + body).lower()
+    if any(kw in combined for kw in _URGENT_KEYWORDS):
+        return "show"
+    if any(kw in combined for kw in _SUPPRESS_KEYWORDS):
+        return "suppress"
+    return "show"  # default
+
+
+def triage_notifications(count: int = 10) -> dict[str, list[dict]]:
+    """Return recent notifications bucketed by classification."""
+    notifs = NotificationTriage().recent(count)
+    result: dict[str, list[dict]] = {"show": [], "suppress": [], "defer": []}
+    for n in notifs:
+        category = classify_notification(n.title, n.body)
+        result[category].append(n.to_dict())
+    return result

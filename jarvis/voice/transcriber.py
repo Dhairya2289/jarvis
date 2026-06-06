@@ -2,6 +2,7 @@
 
 import json
 import os
+import tempfile
 import wave
 
 import vosk
@@ -20,6 +21,19 @@ def _get_model():
             raise RuntimeError(f"Vosk model not found at {MODEL_PATH}")
         _model_instance = vosk.Model(MODEL_PATH)
     return _model_instance
+
+
+def transcribe_bytes(audio_bytes: bytes) -> str:
+    """Transcribe raw audio bytes by writing to a temp WAV file."""
+    try:
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
+            tmp.write(audio_bytes)
+            tmp_path = tmp.name
+        result = transcribe(tmp_path)
+    finally:
+        if 'tmp_path' in locals():
+            os.unlink(tmp_path)
+    return result
 
 
 def transcribe(audio_path: str) -> str:

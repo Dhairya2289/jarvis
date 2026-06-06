@@ -1,10 +1,13 @@
-"""Watch the notes directory and ingest changed Markdown/text files into memory."""
+"""Watch the notes directory and ingest changed Markdown/text files into memory.
+Also watch Downloads and auto-trigger organize_downloads on new files.
+"""
 from __future__ import annotations
 
 import logging
 import os
 import shutil
 import subprocess
+import threading
 import time
 from pathlib import Path
 from typing import Final
@@ -15,6 +18,7 @@ from jarvis.episodic_memory import store_successful_task
 _log = logging.getLogger(__name__)
 
 WATCH_DIR: Final[Path] = Path(NOTES_DIR).expanduser()
+DOWNLOADS_DIR: Final[Path] = Path.home() / "Downloads"
 _POLL_INTERVAL: Final[int] = 5
 _ALLOWED_EXTS: Final[set[str]] = {".txt", ".md"}
 
@@ -39,6 +43,48 @@ def _ingest(path: Path) -> None:
 
 def _shutil_which(cmd: str) -> str | None:
     return shutil.which(cmd)
+
+
+def _on_downloads_change(path: Path) -> None:
+    """Handle a new file in Downloads: wait 2s then organize."""
+    if path.is_dir():
+        return
+    _log.info("Download detected: %s — waiting 2s", path.name)
+    time.sleep(2)
+    try:
+        from jarvis.download_organizer import DownloadOrganizer
+        result = DownloadOrganizer(downloads_dir=DOWNLOADS_DIR).organize()
+        _log.info("Organized downloads: %s", result)
+    except Exception:
+        _log.error("Failed to organize downloads", exc_info=True)
+
+
+def _watch_downloads() -> None:
+    """Watch Downloads for new files and auto-organize."""
+    DOWNLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    _log.info("Watching Downloads: %s", DOWNLOADS_DIR)
+
+    if not _shutil_which("inotifywait"):
+        _log.info("inotifywait not found; Downloads watcher disabled")
+        return
+
+    process = subprocess.Popen(
+        [
+            "inotifywait",
+            "-m",
+            "-e",
+            "create,moved_to",
+            "--format",
+            "%w%f",
+            str(DOWNLOADS_DIR),
+        ],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert process.stdout is not None
+    for line in iter(process.stdout.readline, ""):
+        _on_downloads_change(Path(line.strip()))
 
 
 def watch_files() -> None:
@@ -86,9 +132,25 @@ def _poll_files() -> None:
         time.sleep(_POLL_INTERVAL)
 
 
-if __name__ == "__main__":
+def start() -> None:
+    """Start all file watchers (notes + downloads) in background threads."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    watch_files()
+    threads = [
+        threading.Thread(target=watch_files, daemon=True),
+        threading.Thread(target=_watch_downloads, daemon=True),
+    ]
+    for t in threads:
+        t.start()
+    _log.info("File watchers started")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        _log.info("Shutting down watchers")
 
 
-__all__ = ["watch_files", "_ingest"]
+if __name__ == "__main__":
+    start()
+
+
+__all__ = ["watch_files", "_watch_downloads", "_ingest", "start"]

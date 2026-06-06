@@ -362,3 +362,22 @@ class ObsidianBrain:
         path.write_text(raw + entry, encoding="utf-8")
         log.info("Appended to daily note %s", path)
         return path
+
+
+# ------------------------------------------------------------------ #
+# Standalone helpers
+# ------------------------------------------------------------------ #
+
+def write_note(name: str, content: str, folder: str = "general") -> str:
+    """Write a note to the vault, creating parent folders if needed.
+
+    Overwrites existing notes (unlike ``create_note`` which raises
+    ``FileExistsError``).
+    """
+    brain = ObsidianBrain()
+    folder_path = brain.vault / folder
+    folder_path.mkdir(parents=True, exist_ok=True)
+    path = _note_path(brain.vault, name, folder)
+    path.write_text(content, encoding="utf-8")
+    log.info("Wrote note %s", path)
+    return str(path)

@@ -1,0 +1,22 @@
+name: focus_mode
+description: "Activate 25-minute Pomodoro focus mode. Close distractions, pause notifications, and announce start/end."
+trigger:
+  - "focus mode"
+  - "pomodoro"
+  - "do not disturb"
+steps:
+  - action: bash
+    command: |
+      hyprctl dispatch closewindow class:discord 2>/dev/null || true
+      hyprctl dispatch closewindow class:telegram-desktop 2>/dev/null || true
+      dunstctl set-paused true 2>/dev/null || true
+      echo 25 > /tmp/focus_minutes
+  - action: speak
+    text: "Focus mode activated. 25 minutes on the clock."
+  - action: schedule
+    after_minutes: 25
+    then:
+      - action: speak
+        text: "Pomodoro complete. Take a 5-minute break."
+      - action: bash
+        command: dunstctl set-paused false 2>/dev/null || true
