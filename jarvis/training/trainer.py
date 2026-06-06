@@ -150,13 +150,22 @@ def train_lora(
         remove_unused_columns=False,
     )
 
+    # Tokenize dataset manually (TRL 1.5 removed max_seq_length from SFTTrainer)
+    def tokenize_fn(examples):
+        return tokenizer(
+            examples["text"],
+            truncation=True,
+            max_length=max_seq_length,
+            padding="max_length",
+        )
+
+    tokenized = dataset.map(tokenize_fn, batched=True)
+    tokenized = tokenized.remove_columns(["text"])
+
     trainer = SFTTrainer(
         model=model,
-        train_dataset=dataset,
-        tokenizer=tokenizer,
+        train_dataset=tokenized,
         args=training_args,
-        max_seq_length=max_seq_length,
-        dataset_text_field="text",
     )
 
     _log.info("Starting training for %d epochs on CPU...", num_epochs)

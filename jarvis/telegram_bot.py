@@ -405,6 +405,95 @@ async def btn_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 
 # ═════════════════════════════════════════════════════════==
+# ═══════════════════════════════════════════════════════════
+#  Multi-device commands
+# ═════════════════════════════════════════════════════════==
+async def cmd_apps(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    from jarvis.apps.desktop import list_apps
+    apps = list_apps()
+    text = "📱 *Desktop Apps*\n" + "\n".join(f"- {a.name}" for a in apps[:50])
+    await update.message.reply_text(text, parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    query = " ".join(context.args) if context.args else ""
+    from jarvis.apps.desktop import search_apps
+    results = search_apps(query)
+    if not results:
+        await update.message.reply_text(f"No apps matching '{query}'.")
+        return
+    text = f"🔍 *Search: {query}*\n" + "\n".join(f"- {a.name}: `{a.exec}`" for a in results[:20])
+    await update.message.reply_text(text, parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_launch(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    name = " ".join(context.args) if context.args else ""
+    from jarvis.tools import dispatch_tool
+    result = dispatch_tool("launch_app", {"name": name})
+    await update.message.reply_text(f"🚀 *Launch*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    from jarvis.tools import dispatch_tool
+    result = dispatch_tool("system_health_report", {})
+    await update.message.reply_text(f"🖥️ *System Status*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_run(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update) or len(context.args) < 1:
+        await update.message.reply_text("Usage: /run <tool_name> [arg=value ...]")
+        return
+    tool_name = context.args[0]
+    args = {}
+    for arg in context.args[1:]:
+        if "=" in arg:
+            k, v = arg.split("=", 1)
+            args[k] = v
+    from jarvis.tools import dispatch_tool
+    result = dispatch_tool(tool_name, args)
+    await update.message.reply_text(f"⚙️ *{tool_name}*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_obsidian(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    query = " ".join(context.args) if context.args else ""
+    from jarvis.tools import dispatch_tool
+    result = dispatch_tool("obsidian_search", {"query": query})
+    await update.message.reply_text(f"🧠 *Obsidian*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_skills(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update):
+        return
+    from jarvis.tools import dispatch_tool
+    result = dispatch_tool("skill_list", {})
+    await update.message.reply_text(f"🛠️ *Skills*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
+async def cmd_proactive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not allowed(update) or not context.args:
+        await update.message.reply_text("Usage: /proactive <start|stop>")
+        return
+    action = context.args[0].lower()
+    from jarvis.tools import dispatch_tool
+    if action == "start":
+        result = dispatch_tool("proactive_start", {})
+    elif action == "stop":
+        result = dispatch_tool("proactive_stop", {})
+    else:
+        result = "Unknown action. Use start or stop."
+    await update.message.reply_text(f"🤖 *Proactive*\n{result}", parse_mode=constants.ParseMode.MARKDOWN)
+
+
 #  Main
 # ═════════════════════════════════════════════════════════==
 def main() -> None:
@@ -423,6 +512,15 @@ def main() -> None:
     app.add_handler(CommandHandler("evolve", cmd_evolve))
     app.add_handler(CommandHandler("rate", cmd_rate))
     app.add_handler(CommandHandler("queue", cmd_queue))
+    # Multi-device
+    app.add_handler(CommandHandler("apps", cmd_apps))
+    app.add_handler(CommandHandler("search", cmd_search))
+    app.add_handler(CommandHandler("launch", cmd_launch))
+    app.add_handler(CommandHandler("status", cmd_status))
+    app.add_handler(CommandHandler("run", cmd_run))
+    app.add_handler(CommandHandler("obsidian", cmd_obsidian))
+    app.add_handler(CommandHandler("skills", cmd_skills))
+    app.add_handler(CommandHandler("proactive", cmd_proactive))
     app.add_handler(CallbackQueryHandler(btn_callback))
     app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))

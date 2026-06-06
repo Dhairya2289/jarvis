@@ -406,6 +406,18 @@ TOOL_DEFINITIONS: List[dict] = [
         "description": "Clean old tool-usage patterns from auto-skill detector.",
         "input_schema": {"type": "object", "properties": {}},
     },
+    {
+        "name": "markitdown_convert",
+        "description": "Convert any document (PDF, PPTX, DOCX, XLSX) to markdown using markitdown.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Path to the file to convert."},
+                "save_to_obsidian": {"type": "boolean", "default": True},
+            },
+            "required": ["path"],
+        },
+    },
 ]
 
 
@@ -842,6 +854,26 @@ def _autoskill_prune() -> str:
         return f"[AUTOSKILL ERROR] {exc}"
 
 
+def _markitdown_convert(path: str, save_to_obsidian: bool = True) -> str:
+    try:
+        from markitdown import MarkItDown
+        from pathlib import Path
+        result = MarkItDown().convert(path)
+        text = result.text_content
+        if save_to_obsidian:
+            from jarvis.obsidian_brain import ObsidianBrain
+            name = Path(path).stem
+            ObsidianBrain().create_note(
+                name=f"converted_{name}",
+                content=text[:5000],
+                folder="imports",
+                tags=["markitdown", Path(path).suffix.lstrip(".")],
+            )
+        return f"[MARKITDOWN] Converted {path} ({len(text)} chars)"
+    except Exception as exc:
+        return f"[MARKITDOWN ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -881,4 +913,5 @@ _DISPATCH_MAP = {
     "proactive_stop": _proactive_stop,
     "autoskill_review": _autoskill_review,
     "autoskill_prune": _autoskill_prune,
+    "markitdown_convert": _markitdown_convert,
 }
