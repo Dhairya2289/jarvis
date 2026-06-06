@@ -19,9 +19,9 @@ from jarvis.config import BLOCKED_COMMANDS
 _DISPATCH_EXTRA: Dict[str, Callable] = {}
 
 
-def register_tool(name: str, fn: Callable) -> None:
-    """Register an external tool at runtime."""
-    _DISPATCH_EXTRA[name] = fn
+def register_tool(name: str, func: Callable):
+    """Register a user skill or dynamically loaded tool."""
+    _DISPATCH_EXTRA[name] = func
 
 
 # ── Tool Schemas ──────────────────────────────────────────

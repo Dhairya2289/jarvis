@@ -674,62 +674,70 @@ class ApiManager:
         full_text = ""
         tool_calls_raw: Dict[int, Dict[str, str]] = {}
 
-        async def _stream_coro():
-            return await client.stream("POST", url, headers=headers, json=payload)
+        max_retries = 3
+        delays = [1.0, 2.0, 4.0]
 
-        async with await self._request_with_retry(
-            _stream_coro(), provider_name, "stream"
-        ) as r:
-            r.raise_for_status()
-            async for line in r.aiter_lines():
-                if not line or not line.startswith("data: "):
-                    continue
-                if line == "data: [DONE]":
-                    break
-                try:
-                    chunk = json.loads(line[6:])
-                    if not chunk.get("choices"):
+        for attempt in range(max_retries + 1):
+            try:
+                async with client.stream("POST", url, headers=headers, json=payload) as r:
+                    if r.status_code in {429, 503, 504} and attempt < max_retries:
+                        await asyncio.sleep(delays[min(attempt, len(delays)-1)])
                         continue
-                    delta = chunk["choices"][0].get("delta", {})
-                    if delta.get("content"):
-                        token = delta["content"]
-                        full_text += token
-                        if token_callback:
-                            token_callback(token)
-                    elif delta.get("reasoning_content"):
-                        token = delta["reasoning_content"]
-                        full_text += token
-                        if token_callback:
-                            token_callback(token)
-                    if delta.get("tool_calls"):
-                        for tc in delta["tool_calls"]:
-                            idx = tc.get("index", 0)
-                            tcr = tool_calls_raw.setdefault(
-                                idx, {"id": "", "name": "", "args": ""}
-                            )
-                            if tc.get("id"):
-                                tcr["id"] = tc["id"]
-                            fn = tc.get("function", {})
-                            if fn.get("name"):
-                                tcr["name"] = fn["name"]
-                            if fn.get("arguments"):
-                                tcr["args"] += fn["arguments"]
-                except Exception:
+                    r.raise_for_status()
+                    async for line in r.aiter_lines():
+                        if not line or not line.startswith("data: "):
+                            continue
+                        if line == "data: [DONE]":
+                            break
+                        try:
+                            chunk = json.loads(line[6:])
+                            if not chunk.get("choices"):
+                                continue
+                            delta = chunk["choices"][0].get("delta", {})
+                            token = (delta.get("content") or
+                                     delta.get("reasoning_content") or "")
+                            if token:
+                                full_text += token
+                                if token_callback:
+                                    token_callback(token)
+                            if delta.get("tool_calls"):
+                                for tc in delta["tool_calls"]:
+                                    idx = tc.get("index", 0)
+                                    tcr = tool_calls_raw.setdefault(
+                                        idx, {"id": "", "name": "", "args": ""}
+                                    )
+                                    if tc.get("id"): tcr["id"] = tc["id"]
+                                    fn = tc.get("function", {})
+                                    if fn.get("name"): tcr["name"] = fn["name"]
+                                    if fn.get("arguments"): tcr["args"] += fn["arguments"]
+                        except (json.JSONDecodeError, KeyError):
+                            continue
+                break  # success — exit retry loop
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code in {401, 403}:
+                    raise  # permanent — don't retry
+                if attempt < max_retries:
+                    await asyncio.sleep(delays[min(attempt, len(delays)-1)])
                     continue
+                raise
+            except httpx.TimeoutException:
+                if attempt < max_retries:
+                    await asyncio.sleep(delays[min(attempt, len(delays)-1)])
+                    continue
+                raise
 
         content: List[MockContent] = []
         if full_text:
             content.append(MockContent("text", text=full_text))
         for idx in sorted(tool_calls_raw.keys()):
             tc = tool_calls_raw[idx]
-            content.append(
-                MockContent(
-                    "tool_use",
-                    id_=tc["id"],
-                    name=tc["name"],
-                    input_=json.loads(tc["args"] if tc["args"] else "{}"),
-                )
-            )
+            try:
+                parsed_args = json.loads(tc["args"]) if tc["args"] else {}
+            except json.JSONDecodeError:
+                parsed_args = {}
+            content.append(MockContent(
+                "tool_use", id_=tc["id"], name=tc["name"], input_=parsed_args
+            ))
         return MockResponse(content, model=model)
 
     async def _sync_openai(

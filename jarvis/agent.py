@@ -21,6 +21,7 @@ from typing import Any, Callable, List, Optional
 
 from jarvis.config import MAX_TOKENS, LOG_FILE, FALLBACK_MODEL, DEBATE_TRIGGER_WORDS
 from jarvis.api_manager import call_with_rotation, MockContent
+from jarvis.tools import TOOL_DEFINITIONS
 
 
 SYSTEM_PROMPT = """You are JARVIS — a hyper-capable AI operating system assistant running on CachyOS Linux with Hyprland.
@@ -31,12 +32,18 @@ SYSTEM_PROMPT = """You are JARVIS — a hyper-capable AI operating system assist
 ## Your Identity
 You are not a chatbot. You are an autonomous agent that ACTS. You have direct access to the OS, browser, files, and internet. You think fast and execute precisely.
 
-## Available Tool Categories
-- **OS Control**: `os_hardware_control` (volume, brightness, wifi, bt, lock, suspend), `os_window_control` (workspaces, focus), `os_process_control` (launch, kill).
-- **Media**: `media_control` (play/pause/next), `lightning_play` (instant music/video).
-- **Files & Packages**: `git_ops`, `package_ops` (paru search/install), `find_and_open_file`, `write_file`, `read_file`.
-- **System & Research**: `system_health_report`, `gemini_search` (web), `os_mind_meld` (deep state), `semantic_scan` (window map).
-- **Intelligence**: `delegate_swarm` (spawn specialists), `store_successful_task` (learn), `retrieve_past_task` (recall).
+## Available Tools
+- **Notifications**: `desktop_notification`
+- **OS Control**: `os_hardware_control` (volume, brightness, wifi, bt, lock, suspend), `os_process_control` (launch, kill), `bash` (shell commands), `system_health_report`.
+- **Files & Packages**: `find_and_open_file`, `read_file`, `write_file`, `git_ops`, `markitdown_convert`, `ingest_pdf`, `organize_downloads`.
+- **Search & Discover**: `file_search`, `universal_search`, `browser_interact`, `fetch_rss_digest`.
+- **Desktop & Apps**: `list_apps`, `search_apps`, `launch_app`, `focus_app`, `launch_best`, `snapshot_workspace`, `restore_workspace`.
+- **Obsidian Vault**: `obsidian_create`, `obsidian_read`, `obsidian_search`, `obsidian_daily`.
+- **Tasks & Scheduling**: `cron_add`, `cron_list`, `cron_remove`, `add_todo`, `list_todos`.
+- **Memory & Skills**: `memdir_add`, `memdir_search`, `skill_run`, `skill_list`, `dream_consolidate`, `compress_context`, `autoskill_review`, `autoskill_prune`.
+- **AI & Agents**: `spawn_agent`, `ocr_extract`, `optimize_prompt`.
+- **Utilities**: `take_screenshot`, `speak`, `recent_clipboard`, `recent_notifications`, `archive_screenshots`, `window_timeline`.
+- **MCP & Proactive**: `mcp_start`, `mcp_status`, `proactive_start`, `proactive_stop`.
 
 ## Core Protocols (execute in order)
 1. **RECALL**: Use `retrieve_past_task` first — check if you've solved something similar before.
@@ -230,12 +237,13 @@ async def run_agent(
     while iteration < max_iter:
         iteration += 1
         try:
+            active_tools = TOOL_DEFINITIONS if task_type not in {"speed", "debate"} else None
             response = await call_with_rotation(
                 task=task,
                 task_type=task_type,
                 messages=messages,
                 system=system_ctx,
-                tools=None,  # tools loaded below
+                tools=active_tools,
                 stream=True,
                 token_callback=token_callback,
             )

@@ -4,6 +4,7 @@ Exposes Jarvis as a FastAPI server for remote triggers.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Final
@@ -43,11 +44,16 @@ async def execute_task(
 
     start = time.time()
     try:
-        result = run_agent(req.task, session_id=req.session_id)
+        result = await asyncio.wait_for(
+            run_agent(req.task, session_id=req.session_id),
+            timeout=120.0
+        )
         return TaskResponse(
             result=result,
             elapsed_s=round(time.time() - start, 1),
         )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Agent timed out")
     except HTTPException:
         raise
     except Exception as exc:

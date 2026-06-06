@@ -14,6 +14,37 @@ from jarvis.config import BASE_DIR
 
 _log = logging.getLogger(__name__)
 
+
+def load_user_skills() -> int:
+    """Load ~/.jarvis/skills/*.py into tool dispatcher. Returns count loaded."""
+    from pathlib import Path
+    import importlib.util
+
+    skills_dir = Path.home() / ".jarvis" / "skills"
+    if not skills_dir.exists():
+        return 0
+
+    loaded = 0
+    for skill_file in skills_dir.glob("*.py"):
+        if skill_file.name.startswith("__"):
+            continue
+        try:
+            spec = importlib.util.spec_from_file_location(
+                f"user_skill_{skill_file.stem}", skill_file
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+
+            if hasattr(mod, "run"):
+                from jarvis.tools import register_tool
+                register_tool(skill_file.stem, mod.run)
+                loaded += 1
+                _log.info("Loaded user skill: %s", skill_file.stem)
+        except Exception as e:
+            _log.error("[SKILLS] Failed to load %s: %s", skill_file.name, e)
+
+    return loaded
+
 def bootstrap():
     _log.info("JARVIS Bootstrap v2 — Initializing knowledge base...")
     k = load_knowledge()
