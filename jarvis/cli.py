@@ -240,6 +240,7 @@ def main():
     parser.add_argument("--hud", action="store_true", help="Launch HUD server")
     parser.add_argument("--vision", action="store_true", help="Capture screen and ask vision model")
     parser.add_argument("--workflow", nargs="*", help="Workflow subcommand")
+    parser.add_argument("--loop", action="store_true", help="Start the unified JARVIS agent loop")
     args = parser.parse_args()
 
     if args.doctor:
@@ -278,6 +279,20 @@ def main():
 
     if args.morning:
         print("☀️ Morning briefing not yet implemented in V3.")
+        return
+
+    if args.loop:
+        print_banner() if RICH_AVAILABLE else None
+        async def run_loop():
+            async with get_manager() as mgr:
+                from jarvis.core.loop import JARVISLoop
+                async with JARVISLoop() as loop:
+                    result = await loop.run_once(" ".join(args.task) if args.task else "hello", source="cli")
+                    if RICH_AVAILABLE:
+                        console.print(Panel(Markdown(result), border_style="cyan"))  # type: ignore
+                    else:
+                        print(result)
+        _run_sync(run_loop())
         return
 
     if args.task:

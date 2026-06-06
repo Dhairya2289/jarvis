@@ -185,13 +185,17 @@ class ProactiveLoop:
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO)
-    loop = ProactiveLoop()
-    loop.start()
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        loop.stop()
+    while True:
+        try:
+            loop = ProactiveLoop()
+            loop.start()
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            break
+        except Exception:
+            _log.exception("Proactive loop crashed, restarting in 5s")
+            time.sleep(5)
 
 
 __all__ = ["ProactiveLoop", "main"]

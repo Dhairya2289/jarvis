@@ -497,40 +497,47 @@ async def cmd_proactive(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 #  Main
 # ═════════════════════════════════════════════════════════==
 def main() -> None:
-    if not TELEGRAM_TOKEN:
-        raise RuntimeError("TELEGRAM_TOKEN not set in ~/.jarvis/.env")
+    while True:
+        try:
+            if not TELEGRAM_TOKEN:
+                raise RuntimeError("TELEGRAM_TOKEN not set in ~/.jarvis/.env")
 
-    app = _get_bot_app()
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("plan", cmd_plan))
-    app.add_handler(CommandHandler("debate", cmd_debate))
-    app.add_handler(CommandHandler("today", cmd_today))
-    app.add_handler(CommandHandler("stats", cmd_stats))
-    app.add_handler(CommandHandler("log", cmd_log))
-    app.add_handler(CommandHandler("memory", cmd_memory))
-    app.add_handler(CommandHandler("world", cmd_world))
-    app.add_handler(CommandHandler("evolve", cmd_evolve))
-    app.add_handler(CommandHandler("rate", cmd_rate))
-    app.add_handler(CommandHandler("queue", cmd_queue))
-    # Multi-device
-    app.add_handler(CommandHandler("apps", cmd_apps))
-    app.add_handler(CommandHandler("search", cmd_search))
-    app.add_handler(CommandHandler("launch", cmd_launch))
-    app.add_handler(CommandHandler("status", cmd_status))
-    app.add_handler(CommandHandler("run", cmd_run))
-    app.add_handler(CommandHandler("obsidian", cmd_obsidian))
-    app.add_handler(CommandHandler("skills", cmd_skills))
-    app.add_handler(CommandHandler("proactive", cmd_proactive))
-    app.add_handler(CallbackQueryHandler(btn_callback))
-    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+            app = _get_bot_app()
+            app.add_handler(CommandHandler("start", cmd_start))
+            app.add_handler(CommandHandler("plan", cmd_plan))
+            app.add_handler(CommandHandler("debate", cmd_debate))
+            app.add_handler(CommandHandler("today", cmd_today))
+            app.add_handler(CommandHandler("stats", cmd_stats))
+            app.add_handler(CommandHandler("log", cmd_log))
+            app.add_handler(CommandHandler("memory", cmd_memory))
+            app.add_handler(CommandHandler("world", cmd_world))
+            app.add_handler(CommandHandler("evolve", cmd_evolve))
+            app.add_handler(CommandHandler("rate", cmd_rate))
+            app.add_handler(CommandHandler("queue", cmd_queue))
+            # Multi-device
+            app.add_handler(CommandHandler("apps", cmd_apps))
+            app.add_handler(CommandHandler("search", cmd_search))
+            app.add_handler(CommandHandler("launch", cmd_launch))
+            app.add_handler(CommandHandler("status", cmd_status))
+            app.add_handler(CommandHandler("run", cmd_run))
+            app.add_handler(CommandHandler("obsidian", cmd_obsidian))
+            app.add_handler(CommandHandler("skills", cmd_skills))
+            app.add_handler(CommandHandler("proactive", cmd_proactive))
+            app.add_handler(CallbackQueryHandler(btn_callback))
+            app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, handle_voice))
+            app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 
-    # Start background world model
-    import jarvis.world_model as world_model
-    world_model.start_background()
+            # Start background world model
+            import jarvis.world_model as world_model
+            world_model.start_background()
 
-    _log.info("JARVIS Telegram v2 online.")
-    app.run_polling(drop_pending_updates=True)
+            _log.info("JARVIS Telegram v2 online.")
+            app.run_polling(drop_pending_updates=True)
+        except KeyboardInterrupt:
+            break
+        except Exception:
+            _log.exception("Telegram bot crashed, restarting in 5s")
+            time.sleep(5)
 
 
 if __name__ == "__main__":
