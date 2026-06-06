@@ -5,12 +5,15 @@ Autonomously analyzes task logs to identify recurring failures.
 Suggests fixes for system prompts or tool logic.
 """
 import json
+import logging
 import os
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime
 from jarvis.config import LOG_FILE, BASE_DIR
 from jarvis.api_manager import call_with_rotation
+
+_log = logging.getLogger(__name__)
 
 REPORTS_DIR = BASE_DIR / "failure_reports"
 
@@ -67,7 +70,7 @@ def analyze_failures():
     messages = [{"role": "user", "content": prompt}]
     
     try:
-        print("[ANALYZER] Searching for failure clusters...")
+        _log.info("Searching for failure clusters...")
         response = call_with_rotation(
             task="Analyze failure patterns",
             task_type="logic", # High IQ

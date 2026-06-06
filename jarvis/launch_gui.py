@@ -11,7 +11,10 @@ def launch_gui() -> None:
     except Exception as e:
         raise SystemExit(f"pywebview is not installed: {e}")
 
-    subprocess.run(["hyprctl", "dispatch", "workspace", "empty"], check=False)
+    try:
+        subprocess.run(["hyprctl", "dispatch", "workspace", "empty"], check=False, timeout=15)
+    except subprocess.TimeoutExpired:
+        pass  # Hyprland may be frozen, continue anyway
     time.sleep(0.5)
     webview.create_window(
         "JARVIS Master Console",

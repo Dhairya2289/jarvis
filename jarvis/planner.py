@@ -104,12 +104,16 @@ def _sync_to_taskwarrior(plan: Dict[str, Any]) -> None:
         for milestone in plan.get("milestones", []):
             for day in milestone.get("days", []):
                 for task_text in day.get("tasks", []):
-                    subprocess.run(
-                        ["task", "add", f"due:{day['date']}",
-                         f"project:jarvis.{plan['goal'][:20].replace(' ', '_')}",
-                         task_text],
-                        capture_output=True
-                    )
+                    try:
+                        subprocess.run(
+                            ["task", "add", f"due:{day['date']}",
+                             f"project:jarvis.{plan['goal'][:20].replace(' ', '_')}",
+                             task_text],
+                            capture_output=True,
+                            timeout=15,
+                        )
+                    except subprocess.TimeoutExpired:
+                        _LOG.warning("Taskwarrior task add timed out after 15s")
     except Exception as e:
         _LOG.warning("Taskwarrior sync failed: %s", e)
 

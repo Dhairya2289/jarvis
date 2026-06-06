@@ -10,6 +10,7 @@ from typing import Any
 _log = logging.getLogger(__name__)
 
 GRAPH_FILE: Path = Path.home() / ".jarvis" / "knowledge_graph.pkl"
+KNOWLEDGE_FILE: Path = Path.home() / ".jarvis" / "knowledge.json"
 
 
 def _load_graph() -> Any | None:
@@ -58,4 +59,28 @@ def add_knowledge_edge(source: str, relation: str, target: str, weight: float = 
     return msg
 
 
-__all__ = ["add_knowledge_edge"]
+def load_knowledge() -> dict:
+    """Load the full knowledge dict from JSON file."""
+    try:
+        if KNOWLEDGE_FILE.exists():
+            return json.loads(KNOWLEDGE_FILE.read_text(encoding="utf-8"))
+    except Exception as exc:
+        _log.warning("Failed to load knowledge: %s", exc)
+    return {
+        "app_layouts": {},
+        "learned_skills": {},
+        "lessons": [],
+        "user_prefs": {},
+    }
+
+
+def save_knowledge(k: dict) -> None:
+    """Persist knowledge dict to JSON file."""
+    try:
+        KNOWLEDGE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        KNOWLEDGE_FILE.write_text(json.dumps(k, indent=2), encoding="utf-8")
+    except Exception as exc:
+        _log.error("Failed to save knowledge: %s", exc)
+
+
+__all__ = ["add_knowledge_edge", "load_knowledge", "save_knowledge"]

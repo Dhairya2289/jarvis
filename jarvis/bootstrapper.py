@@ -4,15 +4,18 @@ JARVIS Bootstrapper v2
 Seeds initial memory with known app layouts, skills,
 and injects OS context on first run.
 """
+import logging
 import subprocess
 import json
 import os
 from pathlib import Path
-from jarvis.memory import load_knowledge, save_knowledge, store_skill, store_lesson
+from jarvis.memory import load_knowledge, save_knowledge
 from jarvis.config import BASE_DIR
 
+_log = logging.getLogger(__name__)
+
 def bootstrap():
-    print("JARVIS Bootstrap v2 — Initializing knowledge base...")
+    _log.info("JARVIS Bootstrap v2 — Initializing knowledge base...")
     k = load_knowledge()
 
     # ── App Coordinates ────────────────────────────────────
@@ -42,7 +45,7 @@ def bootstrap():
     }
     for app, elements in defaults.items():
         k["app_layouts"].setdefault(app, {}).update(elements)
-    print(f"  [+] Injected {sum(len(v) for v in defaults.values())} app coordinates")
+    _log.info("Injected %s app coordinates", sum(len(v) for v in defaults.values()))
 
     # ── Pre-built Skills ───────────────────────────────────
     skills = {
@@ -77,7 +80,7 @@ def bootstrap():
     }
     for name, steps in skills.items():
         k["learned_skills"][name] = {"steps": steps}
-    print(f"  [+] Injected {len(skills)} macro skills")
+    _log.info("Injected %s macro skills", len(skills))
 
     # ── Pre-seeded Lessons ────────────────────────────────
     initial_lessons = [
@@ -103,9 +106,8 @@ def bootstrap():
         },
     ]
     for lesson in initial_lessons:
-        from jarvis.memory import store_lesson as sl
         k["lessons"].append({**lesson})
-    print(f"  [+] Injected {len(initial_lessons)} initial lessons")
+    _log.info("Injected %s initial lessons", len(initial_lessons))
 
     # ── User preferences ──────────────────────────────────
     k["user_prefs"].update({
@@ -118,7 +120,7 @@ def bootstrap():
         "notes_app":   "obsidian",
         "flashcards":  "anki",
     })
-    print(f"  [+] Injected OS context preferences")
+    _log.info("Injected OS context preferences")
 
     # ── Read shell aliases ────────────────────────────────
     for rc in [Path.home()/".zshrc", Path.home()/".bashrc"]:
@@ -129,12 +131,11 @@ def bootstrap():
             ][:20]
             if aliases:
                 k["user_prefs"]["shell_aliases"] = aliases
-                print(f"  [+] Learned {len(aliases)} shell aliases from {rc.name}")
+                _log.info("Learned %s shell aliases from %s", len(aliases), rc.name)
             break
 
     save_knowledge(k)
-    print("\n✅ Bootstrap complete. Jarvis is ready.")
-    print(f"   Knowledge stored at: {BASE_DIR}/knowledge.json")
+    _log.info("Bootstrap complete. Knowledge stored at: %s/knowledge.json", BASE_DIR)
 
 if __name__ == "__main__":
     bootstrap()

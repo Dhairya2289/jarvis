@@ -8,8 +8,11 @@ simple everyday actions from ~2s to ~50ms.
 
 import re
 import subprocess
+import logging
 
 from jarvis.tools import _os_hardware_control, _os_process_control
+
+_LOG = logging.getLogger(__name__)
 
 # ── Command patterns ──────────────────────────────────────
 
@@ -78,14 +81,20 @@ def execute_fast_path(task: str) -> str:
     ws_match = re.match(r"^(go to |switch to )?workspace\s+(\d+)$", t, re.IGNORECASE)
     if ws_match:
         ws = ws_match.group(2)
-        subprocess.run(["hyprctl", "dispatch", "workspace", ws], capture_output=True)
+        try:
+            subprocess.run(["hyprctl", "dispatch", "workspace", ws], capture_output=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            _LOG.warning("hyprctl workspace dispatch timed out after 15s")
         return f"Switched to workspace {ws}"
 
     # Hyprland window focus
     win_match = re.match(r"^(focus|switch to)\s+(.+)$", t, re.IGNORECASE)
     if win_match:
         cls = win_match.group(2).strip()
-        subprocess.run(["hyprctl", "dispatch", "focuswindow", f"class:{cls}"], capture_output=True)
+        try:
+            subprocess.run(["hyprctl", "dispatch", "focuswindow", f"class:{cls}"], capture_output=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            _LOG.warning("hyprctl focuswindow dispatch timed out after 15s")
         return f"Focused window: {cls}"
 
     return ""

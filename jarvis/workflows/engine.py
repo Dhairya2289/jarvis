@@ -7,7 +7,10 @@ Nodes: trigger → action → condition → loop → sub_agent → ask_user → 
 
 import asyncio
 import json
+import logging
 from typing import Any, Dict, List
+
+_log = logging.getLogger(__name__)
 
 from jarvis.workflows.schema import Workflow, Node
 from jarvis.tools import dispatch_tool
@@ -181,9 +184,9 @@ class WorkflowEngine:
         options = cfg.get("options")
         if options:
             opts = "/".join(options)
-            print(f"[ASK_USER] {question} ({opts})")
+            _log.info("ask_user: %s (%s)", question, opts)
         else:
-            print(f"[ASK_USER] {question}")
+            _log.info("ask_user: %s", question)
         return {"question": question, "options": options, "awaiting_input": True}
 
     async def _run_code(self, cfg: Dict[str, Any]) -> Any:

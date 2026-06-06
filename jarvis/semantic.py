@@ -11,16 +11,26 @@ _log = logging.getLogger(__name__)
 def execute_semantic_scan() -> str:
     """Query Hyprland for current monitor and window state and return JSON."""
     try:
-        clients_raw = subprocess.run(
-            ["hyprctl", "clients", "-j"],
-            capture_output=True,
-            text=True,
-        ).stdout
-        monitors_raw = subprocess.run(
-            ["hyprctl", "monitors", "-j"],
-            capture_output=True,
-            text=True,
-        ).stdout
+        try:
+            clients_raw = subprocess.run(
+                ["hyprctl", "clients", "-j"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            ).stdout
+        except subprocess.TimeoutExpired:
+            _log.warning("hyprctl clients timed out after 15s")
+            return "[SEMANTIC ERROR] hyprctl clients timed out"
+        try:
+            monitors_raw = subprocess.run(
+                ["hyprctl", "monitors", "-j"],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            ).stdout
+        except subprocess.TimeoutExpired:
+            _log.warning("hyprctl monitors timed out after 15s")
+            return "[SEMANTIC ERROR] hyprctl monitors timed out"
 
         clients = json.loads(clients_raw)
         monitors = json.loads(monitors_raw)

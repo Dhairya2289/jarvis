@@ -15,11 +15,22 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from jarvis.config import BASE_DIR, LOG_LEVEL
-from modules.improvement.fuzzy_matcher import rate_limited, fuzzy_duplicate_check
+from jarvis.config import BASE_DIR
+# stubs for missing module
+def rate_limited(func=None):
+    """No-op decorator; accepts both @rate_limited and @rate_limited() syntax."""
+    def decorator(f):
+        return f
+    if func is not None and callable(func):
+        return decorator(func)
+    return decorator
+
+
+def fuzzy_duplicate_check(new_task, existing_tasks, threshold=0.85):
+    return (False, 0.0)
 
 _log = logging.getLogger(__name__)
-_log.setLevel(getattr(logging, LOG_LEVEL, logging.DEBUG))
+_log.setLevel(logging.DEBUG)
 
 _TASKS_FILE: Path = BASE_DIR / "scheduled_tasks.json"
 

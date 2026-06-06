@@ -573,10 +573,14 @@ def dispatch_tool(name: str, args: Dict[str, Any]) -> str:
 
 
 def _desktop_notification(title: str, message: str, urgency: str = "normal") -> str:
-    subprocess.run(
-        ["notify-send", f"--urgency={urgency}", title, message],
-        capture_output=True,
-    )
+    try:
+        subprocess.run(
+            ["notify-send", f"--urgency={urgency}", title, message],
+            capture_output=True,
+            timeout=15,
+        )
+    except subprocess.TimeoutExpired:
+        pass
     return f"Notification sent: {title}"
 
 
@@ -603,7 +607,10 @@ def _os_hardware_control(action: str, value: str = "") -> str:
         cmd = cmds.get(action)
     if not cmd:
         return f"[ERROR] Unknown hardware action: {action}"
-    subprocess.run(cmd, capture_output=True)
+    try:
+        subprocess.run(cmd, capture_output=True, timeout=15)
+    except subprocess.TimeoutExpired:
+        return f"[ERROR] Hardware command timed out after 15s: {action}"
     return f"Executed: {action}"
 
 
@@ -612,7 +619,10 @@ def _os_process_control(action: str, target: str) -> str:
         subprocess.Popen(target, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return f"Launched: {target}"
     elif action == "kill":
-        subprocess.run(["killall", target], capture_output=True)
+        try:
+            subprocess.run(["killall", target], capture_output=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            return f"[ERROR] killall timed out for: {target}"
         return f"Killed: {target}"
     return f"[ERROR] Unknown action: {action}"
 
@@ -638,7 +648,10 @@ def _find_and_open_file(filename: str, open_file: bool = True) -> str:
         return f"[ERROR] No file matching '{filename}' found."
     best = matches[0]
     if open_file:
-        subprocess.run(["xdg-open", str(best)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        try:
+            subprocess.run(["xdg-open", str(best)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+        except subprocess.TimeoutExpired:
+            return f"[ERROR] xdg-open timed out for: {best}"
     return str(best)
 
 
@@ -679,10 +692,12 @@ def _git_ops(command: str, cwd: str = ".") -> str:
 
 def _system_health_report() -> str:
     try:
-        cpu = subprocess.run(["cat", "/proc/loadavg"], capture_output=True, text=True).stdout.split()[0]
-        mem = subprocess.run(["free", "-h"], capture_output=True, text=True).stdout.split("\n")[1]
-        disk = subprocess.run(["df", "-h", "/"], capture_output=True, text=True).stdout.split("\n")[1]
+        cpu = subprocess.run(["cat", "/proc/loadavg"], capture_output=True, text=True, timeout=15).stdout.split()[0]
+        mem = subprocess.run(["free", "-h"], capture_output=True, text=True, timeout=15).stdout.split("\n")[1]
+        disk = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=15).stdout.split("\n")[1]
         return f"CPU load: {cpu}\nMemory: {mem}\nDisk: {disk}"
+    except subprocess.TimeoutExpired:
+        return "[ERROR] System health check timed out after 15s"
     except Exception as e:
         return f"[ERROR] {e}"
 

@@ -17,15 +17,24 @@ def get_current_stats():
     """Get real-time hardware context."""
     try:
         # RAM usage
-        ram = subprocess.check_output("free -m | awk '/Mem:/ {print $3\"/\"$2\" MB\"}'", shell=True, text=True).strip()
+        try:
+            ram = subprocess.check_output("free -m | awk '/Mem:/ {print $3\"/\"$2\" MB\"}'", shell=True, text=True, timeout=15).strip()
+        except subprocess.TimeoutExpired:
+            ram = "N/A"
         # Disk usage
-        disk = subprocess.check_output("df -h / | awk '/\\// {print $3\"/\"$2}'", shell=True, text=True).strip()
+        try:
+            disk = subprocess.check_output("df -h / | awk '/\\// {print $3\"/\"$2}'", shell=True, text=True, timeout=15).strip()
+        except subprocess.TimeoutExpired:
+            disk = "N/A"
         # Active Windows
-        windows = subprocess.check_output("hyprctl clients -j | jq '. | length'", shell=True, text=True).strip()
+        try:
+            windows = subprocess.check_output("hyprctl clients -j | jq '. | length'", shell=True, text=True, timeout=15).strip()
+        except subprocess.TimeoutExpired:
+            windows = "N/A"
         return {
             "ram_usage": ram,
             "disk_usage": disk,
-            "active_windows": int(windows)
+            "active_windows": int(windows) if windows != "N/A" else 0
         }
     except Exception:
         return {}

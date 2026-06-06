@@ -6,7 +6,7 @@ Uses the Critic specialist to score competing model outputs.
 """
 import json
 import time
-from jarvis.api_manager import call_with_rotation, PROVIDERS
+from jarvis.api_manager import call_with_rotation, PROVIDER_MAP
 from jarvis.swarm import run_sub_agent
 
 def generate_preference_pair(task: str):

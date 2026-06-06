@@ -36,7 +36,11 @@ def _active_window() -> str | None:
             ["hyprctl", "activewindow", "-j"],
             capture_output=True,
             text=True,
+            timeout=15,
         ).stdout
+    except subprocess.TimeoutExpired:
+        _log.warning("hyprctl activewindow timed out after 15s")
+        return None
         aw = json.loads(raw)
         return f"ACTIVE WINDOW: {aw.get('class', '?')} — {aw.get('title', '?')}"
     except Exception:
@@ -49,7 +53,11 @@ def _workspaces() -> str | None:
             ["hyprctl", "workspaces", "-j"],
             capture_output=True,
             text=True,
+            timeout=15,
         ).stdout
+    except subprocess.TimeoutExpired:
+        _log.warning("hyprctl workspaces timed out after 15s")
+        return None
         ws = json.loads(raw)
         occupied = [
             f"WS{w['id']}({w['windows']}wins)"
@@ -67,6 +75,7 @@ def _top_processes() -> str | None:
             ["ps", "aux", "--sort=-%cpu", "--no-header"],
             capture_output=True,
             text=True,
+            timeout=15,
         )
         procs = [line.split()[10] for line in r.stdout.splitlines()[:5]]
         return f"TOP PROCESSES: {', '.join(procs)}"
@@ -76,7 +85,7 @@ def _top_processes() -> str | None:
 
 def _memory() -> str | None:
     try:
-        r = subprocess.run(["free", "-h"], capture_output=True, text=True)
+        r = subprocess.run(["free", "-h"], capture_output=True, text=True, timeout=15)
         for line in r.stdout.splitlines():
             if line.startswith("Mem:"):
                 parts = line.split()
@@ -127,7 +136,7 @@ def _journal_errors() -> str | None:
 
 def _disk_usage() -> str | None:
     try:
-        r = subprocess.run(["df", "-h", "/"], capture_output=True, text=True)
+        r = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=15)
         lines = r.stdout.splitlines()
         line = lines[-1] if lines else ""
         if line:

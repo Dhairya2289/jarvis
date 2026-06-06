@@ -5,9 +5,12 @@ Automatically extracts entities and relations from tool outputs
 and adds them to the persistent concept graph.
 """
 import json
+import logging
 import re
 from jarvis.api_manager import call_with_rotation
 from jarvis.memory import add_knowledge_edge
+
+_log = logging.getLogger(__name__)
 
 def extract_and_add_to_graph(task: str, result: str):
     """
@@ -56,10 +59,10 @@ def extract_and_add_to_graph(task: str, result: str):
                         added += 1
         
         if added:
-            print(f"[GRAPH] Added {added} new knowledge edges.")
+            _log.info("Added %s new knowledge edges", added)
 
     except Exception as e:
-        print(f"[GRAPH] Knowledge extraction failed: {e}")
+        _log.warning("Knowledge extraction failed: %s", e)
 
 if __name__ == "__main__":
     # Test

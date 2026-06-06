@@ -86,6 +86,9 @@ def _paste() -> str:
             text=True,
             timeout=5,
         ).stdout.strip()
+    except subprocess.TimeoutExpired:
+        _log.warning("wl-paste timed out after 5s - clipboard may be locked")
+        return ""
     except Exception:
         return ""
 

@@ -524,9 +524,7 @@ class ApiManager:
             tried.add(provider.name)
             model = provider.models[0]
             model_str = model
-            print(
-                f"    [API] Trying provider: {provider.name} | Model: {model}"
-            )
+            logger.info("Trying provider: %s | Model: %s", provider.name, model)
 
             try:
                 result = await self._call_provider(
@@ -558,7 +556,7 @@ class ApiManager:
             except Exception as e:
                 err = str(e).lower()
                 last_error = e
-                print(f"    [API] {provider.name} failed: {e}")
+                logger.warning("%s failed: %s", provider.name, e)
                 await self.breaker.record_failure(provider.name)
 
                 if "429" in err or "rate" in err:
@@ -568,7 +566,7 @@ class ApiManager:
                     # 404 fallback: if openrouter :free model, retry with suffix stripped
                     if provider.name == "openrouter" and model.endswith(":free"):
                         fallback_model = model[:-5]  # strip ":free"
-                        print(f"    [API] 404 on :free model, retrying with {fallback_model}")
+                        logger.info("404 on :free model, retrying with %s", fallback_model)
                         try:
                             result = await self._call_provider(
                                 provider=provider,
@@ -585,7 +583,7 @@ class ApiManager:
                             await self.limiter.record_call(provider.name)
                             return result
                         except Exception as fallback_err:
-                            print(f"    [API] Fallback also failed: {fallback_err}")
+                            logger.warning("Fallback also failed: %s", fallback_err)
                             await self.breaker.record_failure(provider.name)
                     continue
                 if "authentication" in err or "auth" in err or "key" in err:

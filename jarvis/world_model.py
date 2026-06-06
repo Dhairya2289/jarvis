@@ -189,7 +189,11 @@ def _check_system_health() -> List[str]:
     alerts: List[str] = []
     try:
         # Disk usage
-        r = subprocess.run(["df", "-h", "/"], capture_output=True, text=True)
+        try:
+            r = subprocess.run(["df", "-h", "/"], capture_output=True, text=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            _LOG.debug("df command timed out after 15s")
+            return alerts
         for line in r.stdout.splitlines()[1:]:
             parts = line.split()
             if parts and parts[4].endswith("%"):
@@ -198,7 +202,11 @@ def _check_system_health() -> List[str]:
                     alerts.append(f"⚠️ Disk {parts[4]} full on {parts[5]}")
 
         # High memory
-        r = subprocess.run(["free", "-m"], capture_output=True, text=True)
+        try:
+            r = subprocess.run(["free", "-m"], capture_output=True, text=True, timeout=15)
+        except subprocess.TimeoutExpired:
+            _LOG.debug("free command timed out after 15s")
+            return alerts
         for line in r.stdout.splitlines():
             if line.startswith("Mem:"):
                 parts = line.split()

@@ -14,6 +14,7 @@ Async agent loop with:
 import asyncio
 import json
 import base64
+import subprocess
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, List, Optional
@@ -68,14 +69,16 @@ def get_life_state() -> str:
 def get_os_context() -> str:
     """Get current active window for context injection."""
     try:
-        import subprocess, json as _json
+        import json as _json
         aw = _json.loads(
             subprocess.run(
                 ["hyprctl", "activewindow", "-j"],
-                capture_output=True, text=True, timeout=3
+                capture_output=True, text=True, timeout=15
             ).stdout
         )
         return f"\n[ACTIVE WINDOW: {aw.get('class','?')} — {aw.get('title','?')}]\n"
+    except subprocess.TimeoutExpired:
+        return "\n[ACTIVE WINDOW: timeout]\n"
     except Exception:
         return ""
 

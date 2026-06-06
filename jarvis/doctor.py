@@ -35,11 +35,13 @@ def check_command(name, cmd):
 def check_service(name):
     try:
         res = subprocess.run(["systemctl", "--user", "is-active", name], 
-                             capture_output=True, text=True)
+                             capture_output=True, text=True, timeout=15)
         status = res.stdout.strip()
         if status == "active":
             return "✅ Running", "green"
         return f"❌ {status}", "yellow"
+    except subprocess.TimeoutExpired:
+        return "⚠️ Timeout", "yellow"
     except Exception:
         return "⚠️ Unknown", "yellow"
 
@@ -64,10 +66,13 @@ def run_doctor():
     ts_color = "red"
     if shutil.which("tailscale"):
         try:
-            res = subprocess.run(["tailscale", "status"], capture_output=True, text=True)
+            res = subprocess.run(["tailscale", "status"], capture_output=True, text=True, timeout=15)
             if "logged out" not in res.stdout:
                 tailscale_active = "✅ Active"
                 ts_color = "green"
+        except subprocess.TimeoutExpired:
+            tailscale_active = "⚠️ Timeout"
+            ts_color = "yellow"
         except Exception: pass
     table.add_row("Tailscale", tailscale_active, "Remote secure access")
 
