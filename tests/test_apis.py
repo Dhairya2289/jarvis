@@ -16,7 +16,7 @@ class TestProviders:
         castai = PROVIDER_MAP.get("castai")
         assert castai is not None
         assert castai.is_configured
-        assert castai.base_url == "https://llm.cast.ai/openai/v1"
+        assert castai.base_url == "https://llm.kimchi.dev/openai/v1"
 
     def test_castai_key_rotation(self):
         """Each call to .api_key should return a different key."""

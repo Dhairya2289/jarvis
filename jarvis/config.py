@@ -192,13 +192,13 @@ PROVIDERS: List[Provider] = [
     ),
     Provider(
         name="castai",
-        base_url=os.environ.get("CASTAI_BASE_URL", "https://llm.cast.ai/openai/v1"),
+        base_url=os.environ.get("CASTAI_BASE_URL", "https://llm.kimchi.dev/openai/v1"),
         api_key_env="CASTAI_API_KEY_1",
-        models=["minimax-m2.7", "auto"],
+        models=["kimi-k2.6", "kimi-k2.5", "nemotron-3-super-fp4", "minimax-m2.5", "minimax-m2.7"],
         rpm_limit=60,
         rpd_limit=3000,
         best_for=["logic", "code", "speed", "vision", "research", "debate"],
-        health_endpoint=None,
+        health_endpoint="https://llm.kimchi.dev/openai/v1/models",
     ),
     Provider(
         name="ollama",

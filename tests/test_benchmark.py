@@ -25,7 +25,12 @@ class TestBenchmarkSmoke:
     def test_castai_configured(self):
         castai = PROVIDER_MAP["castai"]
         assert castai.is_configured
-        assert castai.base_url == "https://llm.cast.ai/openai/v1"
+        assert castai.base_url == "https://llm.kimchi.dev/openai/v1"
+
+    def test_castai_models(self):
+        castai = PROVIDER_MAP["castai"]
+        assert "kimi-k2.6" in castai.models
+        assert "minimax-m2.7" in castai.models
 
     def test_gemini_configured(self):
         gemini = PROVIDER_MAP["gemini"]
