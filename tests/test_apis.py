@@ -26,6 +26,19 @@ class TestProviders:
         unique = set(keys)
         assert len(unique) == 7, f"Expected 7 unique keys, got {len(unique)}"
 
+    def test_kimchi_configured(self):
+        kimchi = PROVIDER_MAP.get("kimchi")
+        assert kimchi is not None
+        assert kimchi.is_configured
+        assert kimchi.base_url == "https://llm.kimchi.dev/openai/v1"
+        assert len(kimchi.api_key) > 10
+
+    def test_kimchi_models(self):
+        kimchi = PROVIDER_MAP["kimchi"]
+        assert "kimi-k2.6" in kimchi.models
+        assert "minimax-m2.7" in kimchi.models
+        assert "nemotron-3-super-fp4" in kimchi.models
+
     def test_gemini_configured(self):
         gemini = PROVIDER_MAP.get("gemini")
         assert gemini is not None

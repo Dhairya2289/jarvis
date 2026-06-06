@@ -202,6 +202,16 @@ PROVIDERS: List[Provider] = [
         health_endpoint=None,
     ),
     Provider(
+        name="kimchi",
+        base_url=os.environ.get("KIMCHI_BASE_URL", "https://llm.kimchi.dev/openai/v1"),
+        api_key_env="KIMCHI_API_KEY",
+        models=["kimi-k2.6", "kimi-k2.5", "nemotron-3-super-fp4", "minimax-m2.5", "minimax-m2.7"],
+        rpm_limit=60,
+        rpd_limit=3000,
+        best_for=["logic", "code", "speed", "vision", "research", "debate"],
+        health_endpoint="https://llm.kimchi.dev/openai/v1/models",
+    ),
+    Provider(
         name="castai",
         base_url=os.environ.get("CASTAI_BASE_URL", "https://llm.kimchi.dev/openai/v1"),
         api_key_env="CASTAI_API_KEY_1",
@@ -260,11 +270,13 @@ BRAIN_MODEL = "ollama:qwen2.5:3b"
 MODELS = {
     "speed": [
         "ollama:qwen2.5:3b",
+        "kimchi:kimi-k2.5",
         "groq:llama-3.1-8b-instant",
         "cerebras:llama3.1-8b",
     ],
     "logic": [
         "ollama:qwen2.5:3b",
+        "kimchi:kimi-k2.6",
         "openrouter:deepseek/deepseek-r1:free",
         "sambanova:Meta-Llama-3.1-405B-Instruct",
         "groq:llama-3.3-70b-versatile",
@@ -272,6 +284,7 @@ MODELS = {
     ],
     "code": [
         "ollama:qwen2.5:3b",
+        "kimchi:minimax-m2.7",
         "groq:llama-3.3-70b-versatile",
         "github:gpt-4o",
         "fcc:claude-3-5-sonnet-20241022",
@@ -279,18 +292,21 @@ MODELS = {
     ],
     "vision": [
         "ollama:llava-phi3",
+        "kimchi:kimi-k2.6",
         "gemini:gemini-2.0-flash",
         "github:gpt-4o",
         "fcc:claude-3-5-sonnet-20241022",
     ],
     "research": [
         "ollama:qwen2.5:3b",
-        "gemini:gemini-2.5-pro",
+        "kimchi:kimi-k2.6",
+        "kimchi:nemotron-3-super-fp4",
         "openrouter:deepseek/deepseek-r1:free",
         "sambanova:Meta-Llama-3.3-70B-Instruct",
     ],
     "debate": [
         "ollama:qwen2.5:3b",
+        "kimchi:kimi-k2.6",
         "openrouter:deepseek/deepseek-r1:free",
         "groq:llama-3.3-70b-versatile",
         "sambanova:Meta-Llama-3.1-405B-Instruct",

@@ -749,13 +749,19 @@ class ApiManager:
         r = await self._request_with_retry(_post_coro(), provider_name, "POST")
         r.raise_for_status()
         data = r.json()
-        choice = data["choices"][0]["message"]
+        choice = data["choices"][0].get("message") or {}
         content: List[MockContent] = []
-        if choice.get("content"):
-            content.append(MockContent("text", text=choice["content"]))
-        elif choice.get("reasoning_content"):
-            content.append(MockContent("text", text=choice["reasoning_content"]))
-        for tc in choice.get("tool_calls", []):
+        text = choice.get("content") or ""
+        if not text:
+            text = choice.get("reasoning_content") or ""
+        if not text:
+            # kimchi puts reasoning_content inside provider_specific_fields
+            prov = choice.get("provider_specific_fields", {}) or {}
+            text = prov.get("reasoning_content") or prov.get("reasoning") or ""
+        if text:
+            content.append(MockContent("text", text=text))
+        tool_calls = choice.get("tool_calls") or []
+        for tc in tool_calls:
             fn = tc.get("function", {})
             content.append(
                 MockContent(

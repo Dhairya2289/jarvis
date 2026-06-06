@@ -10,7 +10,7 @@ from jarvis.config import PROVIDERS, PROVIDER_MAP, USE_PAID_PROVIDERS
 
 class TestBenchmarkSmoke:
     def test_provider_count(self):
-        assert len(PROVIDERS) == 15
+        assert len(PROVIDERS) == 16
 
     def test_all_providers_have_names(self):
         for p in PROVIDERS:
@@ -31,6 +31,18 @@ class TestBenchmarkSmoke:
         castai = PROVIDER_MAP["castai"]
         assert "kimi-k2.6" in castai.models
         assert "minimax-m2.7" in castai.models
+
+    def test_kimchi_configured(self):
+        kimchi = PROVIDER_MAP["kimchi"]
+        assert kimchi.is_configured
+        assert kimchi.base_url == "https://llm.kimchi.dev/openai/v1"
+        assert len(kimchi.api_key) > 10
+
+    def test_kimchi_models(self):
+        kimchi = PROVIDER_MAP["kimchi"]
+        assert "kimi-k2.6" in kimchi.models
+        assert "minimax-m2.7" in kimchi.models
+        assert "nemotron-3-super-fp4" in kimchi.models
 
     def test_gemini_configured(self):
         gemini = PROVIDER_MAP["gemini"]
