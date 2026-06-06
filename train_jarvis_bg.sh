@@ -29,7 +29,7 @@ if result['status'] == 'ok':
     export_to_ollama(
         base_model='Qwen/Qwen2.5-0.5B-Instruct',
         adapter_dir=result['adapter_dir'],
-        model_name='jarvis-custom',
+        model_name='jarvis-custom-v2',
     )
-    print('Exported to ollama as jarvis-custom')
+    print('Exported to ollama as jarvis-custom-v2')
 "

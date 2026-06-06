@@ -9,6 +9,7 @@ All tools the agent can call.
 
 import os
 import subprocess
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
@@ -416,6 +417,133 @@ TOOL_DEFINITIONS: List[dict] = [
                 "save_to_obsidian": {"type": "boolean", "default": True},
             },
             "required": ["path"],
+        },
+    },
+    {
+        "name": "file_search",
+        "description": "Search files by name/content using a SQLite FTS5 index.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "limit": {"type": "integer", "default": 20},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "universal_search",
+        "description": "Search across files, desktop apps, and Obsidian vault simultaneously.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+                "scopes": {"type": "array", "items": {"type": "string"}, "default": ["files", "apps", "vault"]},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "ingest_pdf",
+        "description": "Extract text from a PDF and save it as an Obsidian markdown note.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pdf_path": {"type": "string"},
+            },
+            "required": ["pdf_path"],
+        },
+    },
+    {
+        "name": "organize_downloads",
+        "description": "Auto-sort files in ~/Downloads into category folders by MIME type. Pass dry_run=True to preview without moving.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "dry_run": {"type": "boolean", "default": False},
+            },
+        },
+    },
+    {
+        "name": "fetch_rss_digest",
+        "description": "Fetch all configured RSS feeds and return new entries as a markdown digest.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "add_todo",
+        "description": "Parse a natural-language message into to-do items and append them to the Obsidian Inbox.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string"},
+            },
+            "required": ["message"],
+        },
+    },
+    {
+        "name": "list_todos",
+        "description": "List to-do items from the Obsidian Inbox, optionally filtered by status.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "status": {"type": "string", "enum": ["open", "done", "all"], "default": "open"},
+            },
+        },
+    },
+    {
+        "name": "snapshot_workspace",
+        "description": "Snapshot current Hyprland workspace layout (which apps are open in each workspace).",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "restore_workspace",
+        "description": "Restore a Hyprland workspace snapshot previously created with snapshot_workspace.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "launch_best",
+        "description": "Smart launcher: resolve and open the best match for a query across apps, files, and Obsidian vault.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "recent_clipboard",
+        "description": "Return the n most recent clipboard entries (newest first).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "n": {"type": "integer", "default": 20},
+            },
+        },
+    },
+    {
+        "name": "recent_notifications",
+        "description": "Return the n most recent desktop notifications, grouped by app.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "n": {"type": "integer", "default": 10},
+            },
+        },
+    },
+    {
+        "name": "archive_screenshots",
+        "description": "Organise screenshots into date folders and archive files older than 30 days.",
+        "input_schema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "window_timeline",
+        "description": "Return recent active window focus events as a timeline.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "hours": {"type": "integer", "default": 1},
+            },
         },
     },
 ]
@@ -874,6 +1002,127 @@ def _markitdown_convert(path: str, save_to_obsidian: bool = True) -> str:
         return f"[MARKITDOWN ERROR] {exc}"
 
 
+def _file_search(query: str, limit: int = 20) -> str:
+    try:
+        from jarvis.file_search_index import FileSearchIndex
+        return FileSearchIndex.search(query, limit=limit)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _universal_search(query: str, scopes: list = ["files", "apps", "vault"]) -> str:
+    try:
+        from jarvis.universal_search import universal_search
+        return universal_search(query, scopes=scopes)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _ingest_pdf(pdf_path: str) -> str:
+    try:
+        from jarvis.pdf_ingestion import PDFIngestion
+        return PDFIngestion().ingest(Path(pdf_path))
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _organize_downloads(dry_run: bool = False) -> str:
+    try:
+        from jarvis.download_organizer import DownloadOrganizer
+        return DownloadOrganizer().organize(dry_run=dry_run)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _fetch_rss_digest() -> str:
+    try:
+        from jarvis.rss_reader import RSSReader
+        return RSSReader().get_digest(datetime.now() - timedelta(days=1))
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _add_todo(message: str) -> str:
+    try:
+        from jarvis.smart_todo import SmartTodo
+        vault_path = Path.home() / "Documents" / "vault"
+        todo = SmartTodo(vault_path)
+        items = todo.parse_message(message)
+        todo.add_items(*items)
+        return f"[TODO] Added {len(items)} item(s)"
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _list_todos(status: str = "open") -> str:
+    try:
+        from jarvis.smart_todo import SmartTodo
+        vault_path = Path.home() / "Documents" / "vault"
+        return SmartTodo(vault_path).list_items(status)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _snapshot_workspace() -> str:
+    try:
+        from jarvis.desktop.workspace_memory import WorkspaceMemory
+        return WorkspaceMemory().snapshot()
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _restore_workspace(snapshot_json: str) -> str:
+    try:
+        import json
+        from jarvis.desktop.workspace_memory import WorkspaceMemory
+        snapshot = json.loads(snapshot_json)
+        return WorkspaceMemory().restore(snapshot)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _launch_best(query: str) -> str:
+    try:
+        from jarvis.desktop.smart_launcher import smart_launch
+        return smart_launch(query)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _recent_clipboard(n: int = 20) -> str:
+    try:
+        from jarvis.desktop.clipboard_history import ClipboardHistory
+        return ClipboardHistory().get_recent(n)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _recent_notifications(n: int = 10) -> str:
+    try:
+        from jarvis.desktop.notification_triage import NotificationTriage
+        return NotificationTriage().recent(n)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _archive_screenshots() -> str:
+    try:
+        from jarvis.desktop.screenshot_manager import ScreenshotManager
+        count = ScreenshotManager().archive()
+        return f"[SCREENSHOTS] Archived {count} file(s)"
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
+def _window_timeline(hours: int = 24) -> str:
+    try:
+        from jarvis.desktop.window_logger import WindowLogger
+        since = datetime.now() - timedelta(hours=hours)
+        return WindowLogger().get_timeline(since)
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -914,4 +1163,18 @@ _DISPATCH_MAP = {
     "autoskill_review": _autoskill_review,
     "autoskill_prune": _autoskill_prune,
     "markitdown_convert": _markitdown_convert,
+    "file_search": _file_search,
+    "universal_search": _universal_search,
+    "ingest_pdf": _ingest_pdf,
+    "organize_downloads": _organize_downloads,
+    "fetch_rss_digest": _fetch_rss_digest,
+    "add_todo": _add_todo,
+    "list_todos": _list_todos,
+    "snapshot_workspace": _snapshot_workspace,
+    "restore_workspace": _restore_workspace,
+    "launch_best": _launch_best,
+    "recent_clipboard": _recent_clipboard,
+    "recent_notifications": _recent_notifications,
+    "archive_screenshots": _archive_screenshots,
+    "window_timeline": _window_timeline,
 }

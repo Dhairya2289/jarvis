@@ -42,6 +42,17 @@ def merge_adapter(
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
 
+    # Preserve canonical config metadata for Ollama GGUF compatibility.
+    # Training may alter eos_token_id / pad_token_id in saved configs, which
+    # breaks llama.cpp's convert_hf_to_gguf. Restore original config files.
+    for fname in ("config.json", "generation_config.json", "tokenizer_config.json"):
+        src = Path(base_model) / fname
+        dst = output_dir / fname
+        if src.exists():
+            _log.info("Restoring original %s", fname)
+            import shutil
+            shutil.copy2(str(src), str(dst))
+
     return output_dir
 
 
@@ -59,6 +70,8 @@ def write_modelfile(merged_dir: Path, modelfile_path: Path | None = None) -> Pat
         "\n"
         "PARAMETER temperature 0.7\n"
         "PARAMETER num_ctx 4096\n"
+        "PARAMETER stop <|endoftext|>\n"
+        "PARAMETER stop </s>\n"
     )
     modelfile_path.write_text(content, encoding="utf-8")
     _log.info("Modelfile written: %s", modelfile_path)

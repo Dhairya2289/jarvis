@@ -265,7 +265,8 @@ for _d in [BASE_DIR, SANDBOX_DIR, PLANS_DIR, CHROMA_DIR, NOTES_DIR]:
 # Set USE_PAID_PROVIDERS=1 in ~/.jarvis/.env to re-enable cloud APIs.
 USE_PAID_PROVIDERS = os.environ.get("USE_PAID_PROVIDERS", "0") == "1"
 
-BRAIN_MODEL = "ollama:qwen2.5:3b"
+BRAIN_MODEL = "ollama:jarvis-custom-v2"
+FALLBACK_HEAVY = "ollama:qwen2.5:3b"
 
 MODELS = {
     "speed": [

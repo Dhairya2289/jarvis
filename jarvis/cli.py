@@ -15,8 +15,11 @@ Usage:
 
 import argparse
 import asyncio
+import json
 import os
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Optional
 
 try:
@@ -241,6 +244,21 @@ def main():
     parser.add_argument("--vision", action="store_true", help="Capture screen and ask vision model")
     parser.add_argument("--workflow", nargs="*", help="Workflow subcommand")
     parser.add_argument("--loop", action="store_true", help="Start the unified JARVIS agent loop")
+    parser.add_argument("--search", metavar="QUERY", help="Search across all sources via universal search")
+    parser.add_argument("--index-files", nargs="?", const=str(Path.home()), metavar="PATH", help="Index files for search (default: home)")
+    parser.add_argument("--ingest-pdf", metavar="PATH", help="Ingest a PDF document")
+    parser.add_argument("--organize-downloads", action="store_true", help="Organize downloads folder")
+    parser.add_argument("--rss-digest", action="store_true", help="Generate RSS feed digest")
+    parser.add_argument("--feeds", metavar="URLS", help="Comma-separated RSS feed URLs (use with --rss-digest)")
+    parser.add_argument("--add-todo", metavar="MESSAGE", help="Add a todo item")
+    parser.add_argument("--list-todos", nargs="?", const="open", metavar="STATUS", choices=["open", "done"], help="List todos (open or done)")
+    parser.add_argument("--snapshot", action="store_true", help="Take a workspace memory snapshot")
+    parser.add_argument("--restore", metavar="FILE", help="Restore workspace from snapshot file")
+    parser.add_argument("--launch", metavar="QUERY", help="Smart application launcher")
+    parser.add_argument("--clipboard-history", nargs="?", const="10", metavar="N", help="Get clipboard history (last N items)")
+    parser.add_argument("--notifications", nargs="?", const="10", metavar="N", help="Get recent notifications (last N)")
+    parser.add_argument("--archive-screenshots", action="store_true", help="Archive old screenshots")
+    parser.add_argument("--window-timeline", nargs="?", const="24", metavar="HOURS", help="Get window activity timeline")
     args = parser.parse_args()
 
     if args.doctor:
@@ -280,6 +298,205 @@ def main():
     if args.morning:
         print("☀️ Morning briefing not yet implemented in V3.")
         return
+
+    # ── 14 new feature handlers ───────────────────────────────────────
+
+    if args.search:
+        try:
+            from jarvis.universal_search import universal_search
+            result = _run_sync(universal_search(args.search))
+            if RICH_AVAILABLE:
+                console.print(result)  # type: ignore
+            else:
+                print(result)
+        except Exception as e:
+            print(f"Search error: {e}")
+        return
+
+    if args.index_files:
+        try:
+            from jarvis.file_search_index import FileSearchIndex
+            idx = FileSearchIndex()
+            idx.scan(Path(args.index_files))
+            msg = f"Indexed files in: {args.index_files}"
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] {msg}")  # type: ignore
+            else:
+                print(f"OK: {msg}")
+        except Exception as e:
+            print(f"Index error: {e}")
+        return
+
+    if args.ingest_pdf:
+        try:
+            from jarvis.pdf_ingestion import PDFIngestion
+            PDFIngestion().ingest(Path(args.ingest_pdf))
+            msg = f"Ingested: {args.ingest_pdf}"
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] {msg}")  # type: ignore
+            else:
+                print(f"OK: {msg}")
+        except Exception as e:
+            print(f"PDF ingestion error: {e}")
+        return
+
+    if args.organize_downloads:
+        try:
+            from jarvis.download_organizer import DownloadOrganizer
+            count = DownloadOrganizer().organize(dry_run=False)
+            msg = f"Organized {count} files in Downloads"
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] {msg}")  # type: ignore
+            else:
+                print(f"OK: {msg}")
+        except Exception as e:
+            print(f"Organize error: {e}")
+        return
+
+    if args.rss_digest:
+        try:
+            from jarvis.rss_reader import RSSReader
+            feed_urls = args.feeds.split(",") if args.feeds else ["https://hnrss.org/frontpage"]
+            reader = RSSReader(feed_urls)
+            digest = reader.get_digest(datetime.now() - timedelta(days=1))
+            if RICH_AVAILABLE:
+                console.print(digest)  # type: ignore
+            else:
+                print(digest)
+        except Exception as e:
+            print(f"RSS digest error: {e}")
+        return
+
+    if args.add_todo:
+        try:
+            from jarvis.smart_todo import SmartTodo
+            vault = Path("/home/dhairya/obsidian/JARVIS/")
+            todo = SmartTodo(vault)
+            todo.parse_message(args.add_todo)
+            todo.add_items()
+            if RICH_AVAILABLE:
+                console.print("[green]✔[/green] Todo added")  # type: ignore
+            else:
+                print("OK: Todo added")
+        except Exception as e:
+            print(f"Todo error: {e}")
+        return
+
+    if args.list_todos is not None:
+        try:
+            from jarvis.smart_todo import SmartTodo
+            vault = Path("/home/dhairya/obsidian/JARVIS/")
+            todo = SmartTodo(vault)
+            items = todo.list_items(args.list_todos)
+            if RICH_AVAILABLE:
+                console.print(f"[bold]Todos ({args.list_todos}):[/bold]")  # type: ignore
+                for item in items:
+                    console.print(f"  • {item}")  # type: ignore
+            else:
+                print(f"Todos ({args.list_todos}):")
+                for item in items:
+                    print(f"  • {item}")
+        except Exception as e:
+            print(f"List todos error: {e}")
+        return
+
+    if args.snapshot:
+        try:
+            from jarvis.desktop.workspace_memory import WorkspaceMemory
+            snap = WorkspaceMemory().snapshot()
+            output = json.dumps(snap, indent=2, default=str)
+            if RICH_AVAILABLE:
+                console.print(output)  # type: ignore
+            else:
+                print(output)
+        except Exception as e:
+            print(f"Snapshot error: {e}")
+        return
+
+    if args.restore:
+        try:
+            from jarvis.desktop.workspace_memory import WorkspaceMemory
+            data = json.loads(open(args.restore).read())
+            WorkspaceMemory().restore(data)
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] Restored from {args.restore}")  # type: ignore
+            else:
+                print(f"OK: Restored from {args.restore}")
+        except Exception as e:
+            print(f"Restore error: {e}")
+        return
+
+    if args.launch:
+        try:
+            from jarvis.desktop.smart_launcher import smart_launch
+            smart_launch(args.launch)
+        except Exception as e:
+            print(f"Launch error: {e}")
+        return
+
+    if args.clipboard_history is not None:
+        try:
+            from jarvis.desktop.clipboard_history import ClipboardHistory
+            n = int(args.clipboard_history)
+            items = ClipboardHistory().get_recent(n)
+            if RICH_AVAILABLE:
+                console.print(f"[bold]Clipboard history (last {n}):[/bold]")  # type: ignore
+                for item in items:
+                    console.print(f"  {item}")  # type: ignore
+            else:
+                print(f"Clipboard history (last {n}):")
+                for item in items:
+                    print(f"  {item}")
+        except Exception as e:
+            print(f"Clipboard error: {e}")
+        return
+
+    if args.notifications is not None:
+        try:
+            from jarvis.desktop.notification_triage import NotificationTriage
+            n = int(args.notifications)
+            items = NotificationTriage().recent(n)
+            if RICH_AVAILABLE:
+                console.print(f"[bold]Recent notifications ({n}):[/bold]")  # type: ignore
+                for item in items:
+                    console.print(f"  {item}")  # type: ignore
+            else:
+                print(f"Recent notifications ({n}):")
+                for item in items:
+                    print(f"  {item}")
+        except Exception as e:
+            print(f"Notifications error: {e}")
+        return
+
+    if args.archive_screenshots:
+        try:
+            from jarvis.desktop.screenshot_manager import ScreenshotManager
+            count = ScreenshotManager().archive()
+            msg = f"Archived {count} screenshots"
+            if RICH_AVAILABLE:
+                console.print(f"[green]✔[/green] {msg}")  # type: ignore
+            else:
+                print(f"OK: {msg}")
+        except Exception as e:
+            print(f"Screenshot archive error: {e}")
+        return
+
+    if args.window_timeline is not None:
+        try:
+            from jarvis.desktop.window_logger import WindowLogger
+            hours = int(args.window_timeline)
+            timeline = WindowLogger().get_timeline(since=hours * 3600)
+            if RICH_AVAILABLE:
+                console.print(f"[bold]Window timeline (last {hours}h):[/bold]")  # type: ignore
+                console.print(timeline)  # type: ignore
+            else:
+                print(f"Window timeline (last {hours}h):")
+                print(timeline)
+        except Exception as e:
+            print(f"Window timeline error: {e}")
+        return
+
+    # ── end new feature handlers ──────────────────────────────────────
 
     if args.loop:
         print_banner() if RICH_AVAILABLE else None
