@@ -532,14 +532,54 @@ def main():
 
 def _launch_dashboard() -> None:
     """Start the FastAPI server and open the dashboard in a browser/webview."""
+    import socket
+    import subprocess
     import threading
     import time
     import urllib.request
     from jarvis.gui_server import app as gui_app
     import uvicorn
 
+    _PORT = 5050
+    _URL = f"http://127.0.0.1:{_PORT}"
+
+    # Check if port is already in use
+    def _port_in_use(port: int) -> bool:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            return s.connect_ex(("127.0.0.1", port)) == 0
+
+    if _port_in_use(_PORT):
+        # Port occupied — probe to see if it's our server or something else
+        try:
+            resp = urllib.request.urlopen(f"{_URL}/api/health", timeout=1)
+            body = resp.read().decode()
+            # If it responds with health data, it's probably our server already running
+            if '"ok":' in body:
+                if RICH_AVAILABLE:
+                    console.print(f"[bold cyan]JARVIS already running at {_URL} — opening dashboard[/bold cyan]")
+                else:
+                    print(f"JARVIS already running at {_URL} — opening dashboard")
+                _open_dashboard_with_fallback(_URL)
+                return
+        except Exception:
+            pass
+
+        # Not our server — warn user with helpful command
+        msg = (
+            f"[bold red]Port {_PORT} is in use by another process.[/bold red]\n"
+            f"[dim]Run: kill -9 $(lsof -i :{_PORT} -t) 2>/dev/null\n"
+            f"Or:  systemctl --user stop jarvis-hud.service[/dim]"
+        )
+        if RICH_AVAILABLE:
+            console.print(msg)
+        else:
+            print(f"ERROR: Port {_PORT} is in use by another process.")
+            print("Run: kill -9 $(lsof -i :5050 -t) 2>/dev/null")
+            print("Or:  systemctl --user stop jarvis-hud.service")
+        return
+
     def _run_server():
-        uvicorn.run(gui_app, host="127.0.0.1", port=5050, log_level="warning")
+        uvicorn.run(gui_app, host="127.0.0.1", port=_PORT, log_level="warning")
 
     server_thread = threading.Thread(target=_run_server, daemon=True)
     server_thread.start()
@@ -547,24 +587,29 @@ def _launch_dashboard() -> None:
     # Wait for server to be ready
     for _ in range(20):
         try:
-            urllib.request.urlopen("http://127.0.0.1:5050/api/health", timeout=1)
+            urllib.request.urlopen(f"{_URL}/api/health", timeout=1)
             break
         except Exception:
             time.sleep(0.5)
 
-    # Try webview first, fall back to browser
+    _open_dashboard_with_fallback(_URL)
+
+
+def _open_dashboard_with_fallback(base_url: str) -> None:
+    """Open dashboard in webview (preferred) or browser."""
+    dashboard_url = f"{base_url}/static/dashboard.html"
     try:
         from jarvis.launch_gui import launch_gui
         launch_gui()
     except SystemExit:
         # pywebview not installed — fallback to browser
         import webbrowser
-        webbrowser.open("http://127.0.0.1:5050/static/dashboard.html")
+        webbrowser.open(dashboard_url)
         if RICH_AVAILABLE:
-            console.print("[bold cyan]JARVIS Dashboard running at http://127.0.0.1:5050[/bold cyan]")
+            console.print(f"[bold cyan]JARVIS Dashboard at {dashboard_url}[/bold cyan]")
             console.print("[dim]Press Ctrl+C to stop[/dim]")
         else:
-            print("JARVIS Dashboard running at http://127.0.0.1:5050")
+            print(f"JARVIS Dashboard at {dashboard_url}")
             print("Press Ctrl+C to stop")
         try:
             while True:

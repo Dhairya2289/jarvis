@@ -18,7 +18,7 @@ def launch_gui() -> None:
     time.sleep(0.5)
     webview.create_window(
         "JARVIS Master Console",
-        "http://127.0.0.1:5050",
+        "http://127.0.0.1:5050/static/dashboard.html",
         fullscreen=True,
         background_color="#020c18",
     )

@@ -165,25 +165,7 @@ if FASTAPI_AVAILABLE and app is not None:
         except Exception as e:
             return JSONResponse({"ok": False, "error": str(e)})
 
-    @app.get("/api/stream")
-    async def stream():
-        import asyncio
-
-        async def event_generator():
-            while True:
-                s = get_system_stats()
-                entry = {
-                    "timestamp": time.time() * 1000,
-                    "level": "INFO",
-                    "message": f"CPU: {s['cpu']:.1f}% | RAM: {s['ram_pct']:.1f}%",
-                }
-                yield f"data: {entry}\n\n"
-                await asyncio.sleep(2)
-
-        return StreamingResponse(
-            event_generator(),
-            media_type="text/event-stream",
-        )
+    # Note: /api/stream is provided by jarvis.gui.routes for richer SSE updates
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8765):
