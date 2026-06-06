@@ -137,7 +137,7 @@ class AutoSkillDetector:
 
         registry = SkillRegistry()
         registry.discover()
-        if skill_name in [s.name for s in registry._skills.values()]:
+        if skill_name in [s.name for s in registry._cache.values()]:
             return None  # already exists
 
         # Build skill code from most common arg pattern
