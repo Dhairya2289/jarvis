@@ -698,6 +698,11 @@ class ApiManager:
                         full_text += token
                         if token_callback:
                             token_callback(token)
+                    elif delta.get("reasoning_content"):
+                        token = delta["reasoning_content"]
+                        full_text += token
+                        if token_callback:
+                            token_callback(token)
                     if delta.get("tool_calls"):
                         for tc in delta["tool_calls"]:
                             idx = tc.get("index", 0)
@@ -748,6 +753,8 @@ class ApiManager:
         content: List[MockContent] = []
         if choice.get("content"):
             content.append(MockContent("text", text=choice["content"]))
+        elif choice.get("reasoning_content"):
+            content.append(MockContent("text", text=choice["reasoning_content"]))
         for tc in choice.get("tool_calls", []):
             fn = tc.get("function", {})
             content.append(

@@ -22,9 +22,9 @@ class TestProviders:
         """Each call to .api_key should return a different key."""
         castai = PROVIDER_MAP["castai"]
         keys = [castai.api_key for _ in range(10)]
-        # Should cycle through all 6 keys
+        # Should cycle through all 7 keys (6 env + 1 CLI)
         unique = set(keys)
-        assert len(unique) == 6, f"Expected 6 unique keys, got {len(unique)}"
+        assert len(unique) == 7, f"Expected 7 unique keys, got {len(unique)}"
 
     def test_gemini_configured(self):
         gemini = PROVIDER_MAP.get("gemini")

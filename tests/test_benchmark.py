@@ -17,10 +17,10 @@ class TestBenchmarkSmoke:
             assert p.name
 
     def test_castai_key_rotates(self):
-        """Each access returns a different key (6 total)."""
+        """Each access returns a different key (7 total: 6 env + 1 CLI)."""
         castai = PROVIDER_MAP["castai"]
         keys = [castai.api_key for _ in range(8)]
-        assert len(set(keys)) == 6
+        assert len(set(keys)) == 7
 
     def test_castai_configured(self):
         castai = PROVIDER_MAP["castai"]

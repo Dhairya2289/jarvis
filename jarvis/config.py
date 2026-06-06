@@ -4,6 +4,7 @@ All secrets via ~/.jarvis/.env — NEVER hardcode tokens here.
 Enhanced with provider health-check endpoints for async API manager.
 """
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -46,6 +47,16 @@ class Provider:
                 k for i in range(1, 7)
                 if (k := os.environ.get(f"CASTAI_API_KEY_{i}"))
             ]
+            # Also include the CLI key from ~/.config/kimchi/config.json
+            try:
+                config_path = Path.home() / ".config" / "kimchi" / "config.json"
+                if config_path.exists():
+                    cfg = json.load(open(config_path))
+                    cli_key = cfg.get("apiKey", "")
+                    if cli_key and cli_key not in keys:
+                        keys.append(cli_key)
+            except Exception:
+                pass
             if keys:
                 idx = _CASTAI_KEY_INDEX % len(keys)
                 _CASTAI_KEY_INDEX = (_CASTAI_KEY_INDEX + 1) % len(keys)
