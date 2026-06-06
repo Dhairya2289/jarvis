@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from jarvis.config import BASE_DIR
 
@@ -328,3 +328,93 @@ async def action(body: dict):
         })
     except Exception as e:
         return JSONResponse({"ok": False, "message": str(e)})
+
+
+# ── Chat (streaming via Ollama) ───────────────────────────
+
+@router.post("/chat")
+async def chat(body: dict):
+    """Stream chat completions from the local JARVIS model."""
+    messages = body.get("messages", [])
+    model = body.get("model", "jarvis-custom-v2")
+
+    async def event_stream():
+        import httpx, json as _json
+        async with httpx.AsyncClient() as client:
+            payload = {
+                "model": model,
+                "messages": messages,
+                "stream": True,
+                "options": {"num_predict": 300},
+            }
+            async with client.stream("POST", "http://localhost:11434/api/chat", json=payload, timeout=60) as resp:
+                async for line in resp.aiter_lines():
+                    if not line:
+                        continue
+                    try:
+                        chunk = _json.loads(line)
+                        content = chunk.get("message", {}).get("content", "")
+                        if content:
+                            yield f"data: {_json.dumps({'content': content})}\n\n"
+                    except Exception:
+                        pass
+                yield "data: [DONE]\n\n"
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+# ── Real-time SSE stream ─────────────────────────────────
+
+@router.get("/stream")
+async def stream():
+    """Server-Sent Events pushing real-time system updates."""
+    async def event_generator():
+        import json as _json, asyncio as _asyncio
+        while True:
+            try:
+                data = {}
+                # Health
+                try:
+                    import psutil
+                    data["health"] = {
+                        "cpu": f"{psutil.cpu_percent(interval=0.1)}%",
+                        "memory": f"{psutil.virtual_memory().used // (1024**3)}G / {psutil.virtual_memory().total // (1024**3)}G",
+                        "disk": f"{psutil.disk_usage('/').used // (1024**3)}G / {psutil.disk_usage('/').total // (1024**3)}G",
+                    }
+                except Exception:
+                    data["health"] = {"cpu": "?", "memory": "?", "disk": "?"}
+
+                # Active window
+                try:
+                    from jarvis.desktop.window_logger import WindowLogger
+                    tick = WindowLogger().tick()
+                    data["desktop"] = {
+                        "active_window": tick.get("title", "?") if tick else "?",
+                        "active_class": tick.get("class", "?") if tick else "?",
+                    }
+                except Exception:
+                    data["desktop"] = {"active_window": "?"}
+
+                # Task count
+                try:
+                    from jarvis.smart_todo import SmartTodo
+                    vault = Path.home() / "obsidian" / "JARVIS"
+                    todos = SmartTodo(vault).list_items("open")
+                    data["tasks"] = {"open": len(todos)}
+                except Exception:
+                    data["tasks"] = {"open": 0}
+
+                # Notifications
+                try:
+                    from jarvis.desktop.notification_triage import NotificationTriage
+                    notifs = NotificationTriage().recent(5)
+                    data["notifications"] = {"count": len(notifs)}
+                except Exception:
+                    data["notifications"] = {"count": 0}
+
+                yield f"data: {_json.dumps(data)}\n\n"
+                await _asyncio.sleep(3)
+            except Exception:
+                await _asyncio.sleep(3)
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
