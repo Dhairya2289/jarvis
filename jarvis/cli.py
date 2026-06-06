@@ -597,6 +597,7 @@ def _launch_dashboard() -> None:
 
 def _open_dashboard_with_fallback(base_url: str) -> None:
     """Open dashboard in webview (preferred) or browser."""
+    import time
     dashboard_url = f"{base_url}/static/dashboard.html"
     try:
         from jarvis.launch_gui import launch_gui
