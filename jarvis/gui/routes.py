@@ -266,6 +266,42 @@ async def rss():
         return JSONResponse({"entries": [], "count": 0, "error": str(e)})
 
 
+# ── GET /api/analytics ───────────────────────────────────────────────────────
+
+
+@router.get("/analytics")
+async def analytics():
+    """Return screen-time analytics report."""
+    try:
+        def _load():
+            from jarvis.desktop.analytics import generate_daily_report
+            return generate_daily_report()
+
+        report = await _run_sync(_load)
+        return JSONResponse({"report": report})
+    except Exception as e:
+        return JSONResponse({"report": "Error generating report.", "error": str(e)})
+
+
+# ── GET /api/persona ─────────────────────────────────────────────────────────
+
+
+@router.get("/persona")
+async def persona_status():
+    """Return current JARVIS persona mode."""
+    try:
+        from jarvis.persona import get_current_persona, get_persona_text, PERSONAS
+
+        mode = get_current_persona()
+        return JSONResponse({
+            "mode": mode,
+            "description": get_persona_text(),
+            "all_modes": list(PERSONAS.keys()),
+        })
+    except Exception as e:
+        return JSONResponse({"mode": "unknown", "error": str(e)})
+
+
 # ── GET /api/memory ──────────────────────────────────────────────────────────
 
 

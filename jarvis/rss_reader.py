@@ -52,9 +52,10 @@ class RSSReader:
     are returned by ``fetch_all`` and written to Obsidian.
     """
 
-    def __init__(self, db_path: Path, feeds: list[str]) -> None:
-        self.db_path = Path(db_path)
-        self.feeds = feeds
+    def __init__(self, db_path: Path = None, feeds: list[str] = None) -> None:
+        from jarvis.config import BASE_DIR
+        self.db_path = Path(db_path) if db_path else BASE_DIR / "rss.db"
+        self.feeds = feeds if feeds is not None else ["https://hnrss.org/frontpage"]
         self._init_db()
 
     # ------------------------------------------------------------------ #
@@ -271,3 +272,18 @@ def _parse_entries(parsed: Any, feed_name: str) -> list[FeedEntry]:
             )
         )
     return entries
+
+def get_unread_items(limit: int = 20) -> list[dict]:
+    """Fetch recent RSS entries and return them as plain dicts."""
+    reader = RSSReader()
+    entries = reader.fetch_all()
+    return [
+        {
+            "title": e.title,
+            "link": e.link,
+            "summary": e.summary,
+            "published": e.published.isoformat(),
+            "feed_name": e.feed_name,
+        }
+        for e in entries[:limit]
+    ]

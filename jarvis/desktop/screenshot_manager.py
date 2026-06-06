@@ -185,3 +185,20 @@ class ScreenshotManager:
             if not candidate.exists():
                 return candidate
             counter += 1
+
+def get_system_health() -> str:
+    """Return a brief system health string."""
+    try:
+        import subprocess
+        cpu = subprocess.run(
+            ["cat", "/proc/loadavg"], capture_output=True, text=True, timeout=15
+        ).stdout.split()[0]
+        mem = subprocess.run(
+            ["free", "-h"], capture_output=True, text=True, timeout=15
+        ).stdout.split("\n")[1]
+        disk = subprocess.run(
+            ["df", "-h", "/"], capture_output=True, text=True, timeout=15
+        ).stdout.split("\n")[1]
+        return f"CPU load: {cpu}  |  Memory: {mem}  |  Disk: {disk}"
+    except Exception as e:
+        return f"System health unavailable: {e}"

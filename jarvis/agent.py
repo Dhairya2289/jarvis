@@ -213,6 +213,17 @@ async def run_agent(
         identity_prompt = SYSTEM_PROMPT.format(life_state=get_life_state())
 
     system_ctx = identity_prompt + get_os_context()
+    try:
+        from jarvis.session_context import get_welcome_message
+        welcome = get_welcome_message()
+        system_ctx += f"\n\n[WELCOME] {welcome}"
+    except Exception:
+        pass
+    try:
+        from jarvis.persona import get_persona_text
+        system_ctx += f"\n\n[PERSONA] {get_persona_text()}"
+    except Exception:
+        pass
     if past and "No similar" not in past:
         system_ctx += f"\n\n[MEMORY] {past}"
         _status("💾 Past episode recalled")
@@ -229,6 +240,15 @@ async def run_agent(
     for turn in history:
         messages.append({"role": turn["role"], "content": [{"type": "text", "text": turn["content"]}]})
     messages.append({"role": "user", "content": [{"type": "text", "text": task}]})
+
+    # ── Clipboard context injection ──────────────────────
+    try:
+        from jarvis.desktop.clipboard_history import ClipboardHistory
+        recent = ClipboardHistory().get_recent(n=1)
+        if recent and len(recent[0]) < 2000:
+            system_ctx += f"\n\n[CLIPBOARD] {recent[0][:500]}"
+    except Exception:
+        pass
 
     iteration = 0
     max_iter = 20

@@ -547,6 +547,17 @@ TOOL_DEFINITIONS: List[dict] = [
         },
     },
     {
+        "name": "set_persona",
+        "description": "Set JARVIS persona mode: morning, working, evening, focused.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "mode": {"type": "string", "enum": ["morning", "working", "evening", "focused"]},
+            },
+            "required": ["mode"],
+        },
+    },
+    {
         "name": "screen_pointer",
         "description": "Find and click a UI element described in natural language.",
         "input_schema": {
@@ -1166,6 +1177,15 @@ def _window_timeline(hours: int = 24) -> str:
         return f"[ERROR] {exc}"
 
 
+def _set_persona(mode: str) -> str:
+    try:
+        from jarvis.persona import set_persona
+        set_persona(mode)
+        return f"Persona set to {mode}."
+    except Exception as exc:
+        return f"[ERROR] {exc}"
+
+
 _DISPATCH_MAP = {
     "desktop_notification": _desktop_notification,
     "os_hardware_control": _os_hardware_control,
@@ -1220,6 +1240,7 @@ _DISPATCH_MAP = {
     "recent_notifications": _recent_notifications,
     "archive_screenshots": _archive_screenshots,
     "window_timeline": _window_timeline,
+    "set_persona": _set_persona,
     "screen_pointer": lambda args: __import__("jarvis.vision_agent", fromlist=["click_element"]).click_element(args.get("element", "")),
     "screen_explain": lambda args: __import__("asyncio").run(__import__("jarvis.vision_tool", fromlist=["capture_and_ask"]).capture_and_ask("Explain what you see in this screen region.")),
     "focus_mode": _focus_mode,
