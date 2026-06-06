@@ -370,7 +370,7 @@ def main():
     if args.add_todo:
         try:
             from jarvis.smart_todo import SmartTodo
-            vault = Path("/home/dhairya/obsidian/JARVIS/")
+            vault = Path.home() / "obsidian" / "JARVIS"
             todo = SmartTodo(vault)
             todo.parse_message(args.add_todo)
             todo.add_items()
@@ -385,7 +385,7 @@ def main():
     if args.list_todos is not None:
         try:
             from jarvis.smart_todo import SmartTodo
-            vault = Path("/home/dhairya/obsidian/JARVIS/")
+            vault = Path.home() / "obsidian" / "JARVIS"
             todo = SmartTodo(vault)
             items = todo.list_items(args.list_todos)
             if RICH_AVAILABLE:

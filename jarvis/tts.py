@@ -98,12 +98,17 @@ def speak_espeak(text: str) -> str:
             stderr=subprocess.DEVNULL,
         )
         return "[TTS] Spoken via espeak-ng."
+    except subprocess.TimeoutExpired:
+        return "[TTS] espeak timed out."
     except Exception:
         # Last resort: desktop notification
         try:
             subprocess.run(
-                ["notify-send", "-u", "normal", "-a", "Jarvis", "🔊 Jarvis", text[:200]]
+                ["notify-send", "-u", "normal", "-a", "Jarvis", "🔊 Jarvis", text[:200]],
+                timeout=10,
             )
+        except subprocess.TimeoutExpired:
+            _log.warning("notify-send timed out")
         except Exception:
             pass
         return "[TTS] Notification fallback."

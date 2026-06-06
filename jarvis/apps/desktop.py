@@ -142,10 +142,12 @@ def focus_app(name: str) -> str:
             ["hyprctl", "dispatch", "focuswindow", f"title:^{name}$"],
             capture_output=True,
             text=True,
-            timeout=3,
+            timeout=15,
         )
         if "ok" in result.stdout.lower() or result.returncode == 0:
             return f"Focused: {name}"
+    except subprocess.TimeoutExpired:
+        _log.warning("hyprctl title dispatch timed out for: %s", name)
     except Exception:
         pass
     # Fallback: try class match
@@ -154,10 +156,13 @@ def focus_app(name: str) -> str:
             ["hyprctl", "dispatch", "focuswindow", f"class:^{name}$"],
             capture_output=True,
             text=True,
-            timeout=3,
+            timeout=15,
         )
         if "ok" in result.stdout.lower() or result.returncode == 0:
             return f"Focused: {name}"
+    except subprocess.TimeoutExpired:
+        _log.warning("hyprctl class dispatch timed out for: %s", name)
+        return f"[ERROR] hyprctl timed out for: {name}"
     except Exception as exc:
         return f"[ERROR] hyprctl failed: {exc}"
     return f"Window '{name}' not found."

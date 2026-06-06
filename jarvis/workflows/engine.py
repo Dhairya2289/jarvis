@@ -5,9 +5,11 @@ Execute a Workflow DAG node-by-node.
 Nodes: trigger → action → condition → loop → sub_agent → ask_user → code
 """
 
+import ast
 import asyncio
 import json
 import logging
+import re
 from typing import Any, Dict, List
 
 _log = logging.getLogger(__name__)
@@ -130,10 +132,19 @@ class WorkflowEngine:
             if placeholder in expr:
                 expr = expr.replace(placeholder, json.dumps(out))
         try:
-            # SECURITY: eval is dangerous. Restrict builtins.
+            # SECURITY: Validate expression allows only safe characters
+            if not re.match(r"^[\w\s+\-*/<>=!&|().]+$", expr):
+                _log.warning("Unsafe characters in condition expression: %s", expr)
+                return False
+            # Block dangerous patterns
+            dangerous = ["__", "import", "os.", "sys.", "open(", "exec(", "eval(", "subprocess"]
+            if any(d in expr for d in dangerous):
+                _log.warning("Dangerous pattern in condition expression: %s", expr)
+                return False
             result = eval(expr, {"__builtins__": {}}, {})
             return bool(result)
         except Exception as e:
+            _log.debug("Condition eval failed: %s", e)
             return False
 
     async def _run_loop(self, cfg: Dict[str, Any]) -> List[Any]:
@@ -144,9 +155,13 @@ class WorkflowEngine:
             items_expr = cfg.get("items", "")
             # resolve variable or literal list
             try:
-                items = eval(items_expr)
+                # SECURITY: Try literal_eval first, fall back to restricted eval
+                items = ast.literal_eval(items_expr)
             except Exception:
-                items = []
+                try:
+                    items = eval(items_expr, {"__builtins__": {}}, {})
+                except Exception:
+                    items = []
             for item in items:
                 # Each iteration we could run child nodes, but for simplicity
                 # we just execute a configured action
@@ -197,7 +212,8 @@ class WorkflowEngine:
         # python
         try:
             local_vars = {"context": self.context, "outputs": self.context["outputs"]}
-            exec(code, {"__builtins__": __builtins__}, local_vars)
+            # SECURITY: exec with no builtins — modify only with extreme caution
+            exec(code, {"__builtins__": {}}, local_vars)
             return local_vars.get("result", "executed")
         except Exception as e:
             return f"[ERROR] {e}"
