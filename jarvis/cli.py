@@ -237,6 +237,7 @@ def main():
     parser.add_argument("task", nargs="?", help="Task to execute")
     parser.add_argument("--doctor", action="store_true", help="Run system health check")
     parser.add_argument("--voice", action="store_true", help="Start voice assistant")
+    parser.add_argument("--interactive", action="store_true", help="Start interactive JARVIS console")
     parser.add_argument("--debate", metavar="Q", help="Multi-model debate")
     parser.add_argument("--plan", metavar="GOAL", help="Create long-horizon plan")
     parser.add_argument("--morning", action="store_true", help="Morning briefing")
@@ -276,6 +277,16 @@ def main():
 
     if args.dashboard:
         _launch_dashboard()
+        return
+
+    if args.interactive:
+        from jarvis.cli_ui import run_interactive
+        run_interactive()
+        return
+
+    if args.voice:
+        from jarvis.voice import run_voice_mode
+        run_voice_mode()
         return
 
     if args.vision:
