@@ -1,4 +1,6 @@
-# JARVIS — Unified AI OS
+# JARVIS — Unified AI OS (Archived)
+
+> **Note**: Experimental predecessor to [Personal-AI-System](https://github.com/Dhairya2289/Personal-AI-System). Contains earlier experiments in agent orchestration, memory, provider abstraction, and tool execution. Active development has moved to Personal-AI-System.
 
 Single-package agent architecture. Async-first with sync fallbacks.
 
